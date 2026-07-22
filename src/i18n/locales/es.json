@@ -1,0 +1,736 @@
+{
+  "common": {
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "run": "Ejecutar",
+    "pause": "Pausar",
+    "resume": "Reanudar",
+    "yes": "Sí"
+  },
+  "sidebar": {
+    "dashboard": "Panel",
+    "rules": "Reglas",
+    "settings": "Ajustes",
+    "license": "Licencia",
+    "about": "Acerca de",
+    "freePlan": "Plan Free",
+    "folderLimit": "1 carpeta, 2 reglas",
+    "upgradePro": "Mejorar a Pro",
+    "proBadge": "Pro",
+    "history": "Historial"
+  },
+  "dashboard": {
+    "title": "Panel",
+    "subtitle": "Gestiona tus carpetas vigiladas y reglas de organización",
+    "addFolder": "Añadir carpeta",
+    "noFolders": "Aún no se han añadido carpetas",
+    "noFoldersDesc": "Añade una carpeta para empezar a organizar tus archivos. Cada carpeta puede tener sus propias reglas y funcionar en modo manual o automático.",
+    "addFirstFolder": "Añade tu primera carpeta",
+    "rulesActive": "{{enabled}} de {{total}} reglas activas",
+    "successOrganized": "¡{{count}} archivo(s) organizados correctamente!",
+    "partialOrganized": "{{moved}} archivo(s) organizados, {{failed}} fallidos.",
+    "failedOrganize": "Error al organizar los archivos.",
+    "searchPlaceholder": "Buscar carpetas…",
+    "noMatches": "Ninguna carpeta coincide con «{{query}}»."
+  },
+  "settings": {
+    "title": "Ajustes",
+    "subtitle": "Personaliza tu experiencia de organización de archivos",
+    "appearance": "Apariencia",
+    "theme": "Tema",
+    "dark": "Oscuro",
+    "light": "Claro",
+    "system": "Sistema",
+    "language": "Idioma",
+    "languageDesc": "Selecciona tu idioma preferido",
+    "startup": "Inicio",
+    "launchAtStartup": "Iniciar con el sistema",
+    "launchAtStartupDesc": "Iniciar FileGrove automáticamente al iniciar sesión",
+    "launchDesc": "Iniciar File Arbor al iniciar sesión",
+    "behavior": "Comportamiento",
+    "conflictBehavior": "Comportamiento en conflictos de archivos",
+    "conflictBehaviorDesc": "Qué hacer cuando ya existe un archivo con el mismo nombre en el destino",
+    "conflictDesc": "Qué hacer cuando un archivo ya existe",
+    "rename": "Renombrar",
+    "overwrite": "Sobrescribir",
+    "skip": "Omitir",
+    "notifications": "Notificaciones",
+    "minimizeToTray": "Minimizar a la bandeja del sistema",
+    "minimizeToTrayDesc": "Mantener FileGrove en ejecución en la bandeja del sistema al cerrar la ventana",
+    "showTrayIcon": "Mostrar icono en la bandeja",
+    "showTrayIconDesc": "Mostrar el icono de FileGrove en la bandeja del sistema",
+    "showNotifications": "Mostrar notificaciones",
+    "notificationsDesc": "Recibir notificaciones cuando se organizan archivos",
+    "watchedFolders": "Carpetas vigiladas",
+    "noWatchedFolders": "No se están vigilando carpetas. Añade una carpeta desde el Panel.",
+    "about": "Acerca de",
+    "version": "Versión",
+    "updates": "Actualizaciones",
+    "checkForUpdates": "Buscar actualizaciones",
+    "checkForUpdatesDesc": "Comprobar si hay nuevas versiones",
+    "checkingForUpdates": "Buscando actualizaciones...",
+    "checking": "Comprobando...",
+    "upToDate": "¡Estás al día!",
+    "updateAvailable": "La versión {{version}} está disponible",
+    "downloadingUpdate": "Descargando actualización... {{progress}}%",
+    "updateReady": "La versión {{version}} está lista para instalar",
+    "installAndRestart": "Instalar y reiniciar"
+  },
+  "rules": {
+    "title": "Reglas",
+    "subtitle": "Gestiona las reglas de organización. Asigna reglas a carpetas desde el Panel.",
+    "newRule": "Nueva regla",
+    "noCustomRules": "Aún no hay reglas personalizadas",
+    "createFirst": "Haz clic en \"Nueva regla\" para crear tu primera regla personalizada.",
+    "createFirstCta": "+ Nueva regla",
+    "editRule": "Editar regla",
+    "createRule": "Crear nueva regla",
+    "ruleName": "Nombre de la regla",
+    "destination": "Carpeta de destino",
+    "extensions": "Extensiones",
+    "contains": "Contiene",
+    "startsWith": "Empieza con",
+    "endsWith": "Termina con",
+    "regex": "Patrón Regex",
+    "sizeGreaterThan": "Tamaño mayor que (MB)",
+    "sizeLessThan": "Tamaño menor que (MB)",
+    "olderThan": "Más antiguo que (días)",
+    "newerThan": "Más reciente que (días)",
+    "addCondition": "Añadir condición",
+    "selectDestination": "Seleccionar destino",
+    "createRuleBtn": "Crear regla",
+    "saveChanges": "Guardar cambios",
+    "enable": "Activar",
+    "disable": "Desactivar",
+    "noConditions": "No se han definido condiciones",
+    "quickRule": {
+      "resetToDefault": "Restablecer valores predeterminados",
+      "action": {
+        "duplicate": "Duplicar y editar"
+      }
+    },
+    "extensionEditor": {
+      "placeholder": "ej. .pdf",
+      "minOne": "Se requiere al menos una extensión"
+    },
+    "condition": {
+      "size": {
+        "B": "B",
+        "KB": "KB",
+        "MB": "MB",
+        "GB": "GB"
+      },
+      "age": {
+        "day": "Día",
+        "week": "Semana",
+        "month": "Mes",
+        "year": "Año"
+      },
+      "regex": {
+        "invalid": "Regex inválido: {{message}}"
+      }
+    },
+    "summary": {
+      "moreExtensions": "{{first}} y {{count}} más",
+      "nameContains": "Contiene '{{value}}'",
+      "nameStartsWith": "Empieza con '{{value}}'",
+      "nameEndsWith": "Termina con '{{value}}'",
+      "sizeGreaterThan": "Mayor que {{value}} {{unit}}",
+      "sizeLessThan": "Menor que {{value}} {{unit}}",
+      "olderThan": "Más antiguo que {{value}} {{unit}}",
+      "newerThan": "Más reciente que {{value}} {{unit}}",
+      "regex": "Patrón regex",
+      "units": {
+        "B_one": "B",
+        "B_other": "B",
+        "KB_one": "KB",
+        "KB_other": "KB",
+        "MB_one": "MB",
+        "MB_other": "MB",
+        "GB_one": "GB",
+        "GB_other": "GB",
+        "day_one": "día",
+        "day_other": "días",
+        "week_one": "semana",
+        "week_other": "semanas",
+        "month_one": "mes",
+        "month_other": "meses",
+        "year_one": "año",
+        "year_other": "años"
+      },
+      "moreConditions": "+{{count}} más"
+    },
+    "form": {
+      "label": {
+        "questionHeader": "¿A qué archivos debe aplicarse esta regla?",
+        "destination": "Mover a",
+        "name": "Nombre (opcional)",
+        "allOfThese": "Cuando TODAS estas condiciones se cumplan:",
+        "icon": "Icono"
+      },
+      "titleEdit": "Editar regla: {{name}}",
+      "titleFromTemplate": "Crear regla desde plantilla: {{name}}",
+      "namePlaceholder": "Se sugerirá automáticamente",
+      "nameSuggestionHint": "Si se deja vacío: se usará \"{{suggestion}}\"",
+      "conditionLabels": {
+        "extension": "Archivos con extensión",
+        "nameContains": "Archivos cuyo nombre contiene",
+        "nameStartsWith": "Archivos cuyo nombre empieza con",
+        "nameEndsWith": "Archivos cuyo nombre termina con",
+        "regex": "Archivos que coinciden con regex",
+        "sizeGreaterThan": "Archivos mayores que (MB)",
+        "sizeLessThan": "Archivos menores que (MB)",
+        "olderThan": "Archivos más antiguos que (días)",
+        "newerThan": "Archivos más recientes que (días)"
+      },
+      "suggestions": {
+        "fallback": "Nueva regla",
+        "extension": "Archivos {{ext}}",
+        "nameContains": "Archivos con \"{{value}}\"",
+        "nameStartsWith": "Archivos que empiezan con \"{{value}}\"",
+        "nameEndsWith": "Archivos que terminan con \"{{value}}\"",
+        "regex": "Archivos que coinciden con \"{{value}}\"",
+        "sizeGreaterThan": "Archivos mayores que {{value}} MB",
+        "sizeLessThan": "Archivos menores que {{value}} MB",
+        "olderThan": "Archivos de más de {{value}} días",
+        "newerThan": "Archivos de menos de {{value}} días"
+      },
+      "preview": {
+        "label": "Vista previa en vivo",
+        "summary": "Esta regla afectará ~{{count}} archivo(s) en {{folder}}",
+        "calculating": "Calculando...",
+        "error": "No se pudo calcular la vista previa",
+        "noFolders": "Añade una carpeta desde el Panel para ver la vista previa",
+        "fillCondition": "Completa una condición para ver la vista previa",
+        "sampleMatches": "Coincidencias de ejemplo",
+        "truncatedNote": "La carpeta supera {{max}} archivos; el recuento anterior es una estimación parcial"
+      },
+      "placeholders": {
+        "extension": "p. ej. .pdf, .doc, .txt",
+        "nameContains": "p. ej. report, invoice, backup",
+        "nameStartsWith": "p. ej. IMG_, DOC_, temp",
+        "nameEndsWith": "p. ej. _final, _backup, _v2",
+        "regex": "p. ej. ^IMG_\\\\d+\\\\.jpg$",
+        "sizeGreaterThan": "p. ej. 100 (MB)",
+        "sizeLessThan": "p. ej. 10 (MB)",
+        "olderThan": "p. ej. 30 (días)",
+        "newerThan": "p. ej. 7 (días)"
+      },
+      "addCondition": "Añadir condición",
+      "removeCondition": "Eliminar condición",
+      "maxConditionsReached": "Máximo {{max}} condiciones",
+      "conditionRowLabel": "Condición {{index}}"
+    },
+    "action": {
+      "label": "Entonces",
+      "move": "Mover a carpeta",
+      "trash": "Mover a la papelera",
+      "delete": "Eliminar permanentemente",
+      "trashHint": "Los archivos van a la papelera y pueden restaurarse manualmente.",
+      "deleteWarning": "Los archivos se eliminarán permanentemente. Esto no se puede deshacer.",
+      "deleteConfirm": "Entiendo que los archivos se eliminarán permanentemente",
+      "proBadge": "Pro",
+      "runCommand": "Ejecutar comando",
+      "commandPlaceholder": "p. ej., copy {filePath} D:\\Copia\\",
+      "variables": "Variables:",
+      "testButton": "Probar",
+      "testRunning": "Ejecutando…",
+      "testNoSample": "Para probar se necesita una carpeta vigilada con un archivo coincidente",
+      "testResult": "Código de salida {{code}} · {{duration}} ms",
+      "securityWarning": {
+        "title": "¿Ejecutar comandos automáticamente?",
+        "body": "Este comando se ejecutará para cada archivo que coincida con esta regla, con tus permisos de usuario. Usa solo comandos de confianza.",
+        "accept": "Entendido, guardar la regla"
+      },
+      "rerunAlways": "Volver a ejecutar en cada activación",
+      "rerunOnceHint": "Predeterminado: se ejecuta una vez por archivo. Se repite si el archivo o el comando cambian; los fallos se reintentan.",
+      "rerunAlwaysHint": "El comando se ejecutará para cada archivo coincidente en CADA activación — incluido el inicio de la app y las ejecuciones programadas."
+    },
+    "searchPlaceholder": "Buscar reglas…",
+    "noMatches": "Ninguna regla coincide con tus filtros.",
+    "clearFilters": "Limpiar filtros",
+    "tokens": {
+      "label": "Tokens:",
+      "more": "Más",
+      "groupDate": "Fecha y hora",
+      "groupFilename": "Nombre de archivo",
+      "groupFolder": "Carpeta",
+      "groupExif": "Foto (EXIF)",
+      "exifNote": "Los valores EXIF se leen de cada archivo cuando se ejecuta la regla."
+    },
+    "pathBuilder": {
+      "scanRoot": "Carpeta de escaneo",
+      "addFolder": "Añadir carpeta",
+      "moveLeft": "Mover a la izquierda",
+      "moveRight": "Mover a la derecha",
+      "remove": "Quitar",
+      "close": "Cerrar",
+      "folderName": "Nombre de carpeta",
+      "namePart": "Parte del nombre",
+      "literalDefault": "Archivo",
+      "pickerHint": "Haz clic en la parte que quieras como carpeta — puedes añadir varias.",
+      "exampleLabel": "Nombre de ejemplo — escribe tu propio nombre de archivo típico",
+      "noSplit": "«{{delim}}» no divide este ejemplo — cambia el separador o edita el ejemplo.",
+      "addPiece": "Añadir como carpeta",
+      "delimiter": "Dividir por",
+      "space": "espacio",
+      "customDelim": "Personalizado:",
+      "whatSplits": "¿Qué separa los archivos?",
+      "change": "cambiar",
+      "genericNote": "Esta regla se aplica igual a cada archivo adecuado en la carpeta que le asignes — esto es solo un ejemplo.",
+      "exampleName": "Cliente_Categoria_2026_Proyecto",
+      "exampleFiles": ["Anna_Facturas_2026_Marte", "John_Contratos_2025_Jupiter"],
+      "preview": {
+        "title": "Vista previa",
+        "real": "Carpeta seleccionada · {{count}}",
+        "example": "Ejemplo",
+        "flat": "Todos los archivos van directamente al destino — aún sin subcarpetas.",
+        "exampleNote": "Mostrado con nombres de ejemplo — la carpeta real se completa cuando eliges una carpeta de vista previa.",
+        "exifNote": "La cámara / fecha de captura provienen de los datos de cada foto al ejecutar la regla — la vista previa muestra un ejemplo representativo."
+      },
+      "menu": {
+        "date": "Fecha · Año",
+        "nameParts": "Parte del nombre…",
+        "camera": "Cámara + Año de captura",
+        "type": "Tipo de archivo",
+        "literal": "Nombre de carpeta fijo",
+        "advanced": "Token avanzado…"
+      },
+      "tok": {
+        "year": "Año",
+        "month": "Mes",
+        "day": "Día",
+        "date": "Fecha",
+        "weekday": "Día de la semana",
+        "time": "Hora",
+        "camera": "Cámara",
+        "exifYear": "Año de captura",
+        "exifDate": "Fecha de captura",
+        "ext": "Tipo",
+        "folder": "Carpeta",
+        "name": "Nombre"
+      }
+    }
+  },
+  "folderCard": {
+    "single": "Manual",
+    "auto": "Auto",
+    "watching": "Vigilando nuevos archivos...",
+    "paused": "Pausado",
+    "stopped": "Detenido",
+    "enableAutoMode": "¿Activar modo automático?",
+    "autoModeDesc": "El modo automático organizará inmediatamente los archivos existentes que coincidan con las reglas asignadas y seguirá vigilando nuevos archivos.",
+    "deleteWarning": "{{count}} archivo(s) se eliminarán permanentemente — no pasan por la Papelera y no se pueden recuperar:",
+    "deleteWarningMore": "+{{count}} más",
+    "largeFolderWarning": "Esta carpeta tiene más de {{count}} archivos. La organización se ejecuta en lotes limitados y puede tardar un rato.",
+    "deleteWarningPartial": "La carpeta supera {{count}} archivos — la ejecución puede eliminar más de lo que se muestra aquí.",
+    "noRules": "Sin reglas asignadas",
+    "rules": "Reglas",
+    "addRules": "Añadir reglas",
+    "mode": {
+      "single": "Manual",
+      "auto": "Automático",
+      "scheduled": "Programado"
+    },
+    "watcher": {
+      "stopped": "Detenido",
+      "running": "Vigilando",
+      "paused": "En pausa"
+    },
+    "actions": {
+      "organize": "Organizar ahora",
+      "organizing": "Organizando…",
+      "watch": "Iniciar vigilancia",
+      "stop": "Detener vigilancia",
+      "remove": "Eliminar"
+    },
+    "noRulesEmpty": "Aún no hay reglas para esta carpeta",
+    "addRule": "Añadir regla",
+    "hintTitle": "Añadir regla",
+    "hintDesc": "Necesitas al menos una regla para organizar los archivos de esta carpeta. Haz clic en el botón y empieza.",
+    "hintDismiss": "Entendido",
+    "activeRulesCount": "{{count}} regla(s) activa(s)",
+    "activeRules": "Se aplicarán {{count}} regla(s) activa(s) a los archivos de esta carpeta.",
+    "resumeWatching": "¿Reanudar vigilancia?",
+    "resumeDesc": "Al reanudar se organizarán inmediatamente los archivos existentes que coincidan con las reglas asignadas y se seguirá vigilando nuevos archivos.",
+    "organizeFiles": "¿Organizar archivos?",
+    "organizeDesc": "Esto organizará inmediatamente todos los archivos de esta carpeta que coincidan con las reglas asignadas.",
+    "manageRules": "Gestionar reglas",
+    "removeFolder": "Eliminar carpeta",
+    "tooltip": {
+      "single": "Activación manual. Las reglas se aplican al hacer clic en Ejecutar.",
+      "auto": "Vigilancia continua. Los archivos nuevos se mueven automáticamente. (Pro)",
+      "scheduled": "Ejecutar según un horario (Pro)"
+    },
+    "scanSubfolders": "Escanear subcarpetas",
+    "scanSubfoldersDesc": "Incluir archivos dentro de subcarpetas al aplicar reglas. Predeterminado: solo se escanean archivos de nivel superior.",
+    "modeSwitch": {
+      "autoRequiresDisable": {
+        "title": "¿Cambiar a modo Auto?",
+        "body": "El modo Auto solo vigila la raíz de la carpeta. El escaneo de subcarpetas se desactivará. ¿Continuar?",
+        "confirm": "Cambiar a Auto",
+        "cancel": "Cancelar"
+      },
+      "subfoldersRequireManual": {
+        "title": "¿Cambiar a modo Manual?",
+        "body": "El escaneo de subcarpetas requiere ejecución manual. El modo Auto se cambiará a Manual. ¿Continuar?",
+        "confirm": "Activar escaneo de subcarpetas",
+        "cancel": "Cancelar"
+      },
+      "autoDisablesSchedule": {
+        "title": "¿Cambiar a Automático?",
+        "body": "Esto desactivará el horario actual e iniciará un observador en vivo.",
+        "cancel": "Cancelar",
+        "confirm": "Cambiar a Auto"
+      },
+      "scheduledDisablesAuto": {
+        "title": "¿Cambiar a Programado?",
+        "body": "Esto detendrá el observador en vivo y ejecutará los archivos solo en los horarios programados.",
+        "cancel": "Cancelar",
+        "confirm": "Cambiar a Programado"
+      }
+    },
+    "scheduled": "Programado",
+    "schedule": {
+      "title": "Programación",
+      "enabled": "Activado",
+      "disabled": "Desactivado",
+      "days": "Días",
+      "time": "Hora",
+      "nextRunLabel": "Próxima ejecución",
+      "lastRunLabel": "Última ejecución",
+      "notScheduled": "Elige días y una hora para programar.",
+      "runNow": "Ejecutar ahora",
+      "runNowTooltip": "Ejecuta una organización ahora, sin alterar el horario.",
+      "appOpenWarning": "Las ejecuciones programadas solo se activan mientras File Arbor está abierto. Activa Iniciar al arrancar en Configuración para disparos fiables.",
+      "statusActive": "Programación activa",
+      "statusDisabled": "Programación desactivada",
+      "preset": {
+        "everyDay": "Todos los días",
+        "weekdays": "Días laborables",
+        "weekends": "Fines de semana"
+      },
+      "day": {
+        "sun": {
+          "short": "Dom",
+          "long": "Domingo"
+        },
+        "mon": {
+          "short": "Lun",
+          "long": "Lunes"
+        },
+        "tue": {
+          "short": "Mar",
+          "long": "Martes"
+        },
+        "wed": {
+          "short": "Mié",
+          "long": "Miércoles"
+        },
+        "thu": {
+          "short": "Jue",
+          "long": "Jueves"
+        },
+        "fri": {
+          "short": "Vie",
+          "long": "Viernes"
+        },
+        "sat": {
+          "short": "Sáb",
+          "long": "Sábado"
+        }
+      },
+      "duration": {
+        "inMinutes_one": "en {{count}} minuto",
+        "inMinutes_other": "en {{count}} minutos",
+        "inHours_one": "en {{count}} hora",
+        "inHours_other": "en {{count}} horas",
+        "inHoursMinutes": "en {{hours}}h {{minutes}}min",
+        "inDays_one": "en {{count}} día",
+        "inDays_other": "en {{count}} días",
+        "inDaysHours": "en {{days}}d {{hours}}h",
+        "inWeeks_one": "en {{count}} semana",
+        "inWeeks_other": "en {{count}} semanas"
+      },
+      "pause": "Pausar",
+      "resume": "Reanudar",
+      "pauseTooltip": "Pausa esta programación (el cron se detiene, los ajustes se conservan)",
+      "resumeTooltip": "Reanuda esta programación (el cron se reinicia)",
+      "pausedSuffix": "En pausa",
+      "pausedMessage": "Programación en pausa — pulsa Reanudar para activar los disparos."
+    },
+    "rename": "Cambiar nombre"
+  },
+  "rulesPanel": {
+    "title": "Asignar reglas",
+    "subtitle": "Selecciona las reglas a aplicar a",
+    "noRules": "No hay reglas disponibles",
+    "noRulesCta": "+ Crea tu primera regla",
+    "createRules": "Crea reglas desde la página de Reglas para asignarlas aquí.",
+    "goToRules": "Ir a Reglas",
+    "close": "Cerrar",
+    "disabledWarning": "Las reglas atenuadas están desactivadas y no procesarán archivos. Actívalas en la página de Reglas.",
+    "ruleLimit": "Plan Free: {{current}}/{{max}} reglas. Mejora a Pro para reglas ilimitadas.",
+    "proCtaTitle": "Desbloquea reglas ilimitadas",
+    "proCtaButton": "Mejorar a Pro",
+    "createNewRule": "Crear nueva regla",
+    "summary": {
+      "selected": "{{count}} regla(s) seleccionada(s)",
+      "affected": "~{{count}} archivo(s) afectado(s)",
+      "affectedWithSubfolders": "~{{count}} archivo(s) afectado(s) (incluyendo subcarpetas)",
+      "calculating": "Calculando...",
+      "previewError": "Vista previa no disponible",
+      "save": "Guardar",
+      "saveAndRun": "Guardar y ejecutar"
+    },
+    "editRule": "Editar regla"
+  },
+  "tray": {
+    "watching": "Vigilando: {{folders}}",
+    "paused": "Pausado",
+    "notWatching": "Sin vigilancia",
+    "lastFile": "Último: {{file}}",
+    "noRecentActivity": "Sin actividad reciente",
+    "todayCount": "Hoy: {{count}} archivos organizados",
+    "openApp": "Abrir File Arbor",
+    "pauseAll": "Pausar todo",
+    "resumeAll": "Reanudar todo",
+    "quit": "Salir"
+  },
+  "notifications": {
+    "filesOrganized": "{{count}} archivo(s) organizados",
+    "movedTo": "Movido a {{destination}}",
+    "fileMovedTo": "{{filename}} movido a {{destination}}",
+    "filesMovedTo": "{{count}} archivos movidos a {{destination}}",
+    "filesOrganizedMultiple": "{{count}} archivos organizados"
+  },
+  "quickRules": {
+    "images": "Imágenes",
+    "imagesDesc": "Organiza archivos de imagen: JPG, PNG, GIF, WebP, SVG y más",
+    "documents": "Documentos",
+    "documentsDesc": "Organiza documentos: PDF, Word, Excel, PowerPoint y archivos de texto",
+    "videos": "Vídeos",
+    "videosDesc": "Organiza archivos de vídeo: MP4, MKV, AVI, MOV y más",
+    "audio": "Audio",
+    "audioDesc": "Organiza archivos de audio: MP3, WAV, FLAC, AAC y más",
+    "archives": "Archivos comprimidos",
+    "archivesDesc": "Organiza archivos comprimidos: ZIP, RAR, 7Z, TAR y más",
+    "installers": "Instaladores",
+    "installersDesc": "Organiza archivos de instalación: EXE, MSI, DMG y paquetes de aplicaciones"
+  },
+  "permissions": {
+    "title": "Acceso a carpeta requerido",
+    "description": "File Arbor necesita permiso para acceder a",
+    "instructions": "Para conceder acceso:",
+    "step1": "Abre Ajustes del sistema > Privacidad y seguridad > Archivos y carpetas",
+    "step2": "Busca File Arbor en la lista",
+    "step3": "Activa el acceso para las carpetas necesarias",
+    "openSettings": "Abrir ajustes del sistema",
+    "tryAgain": "Intentar de nuevo"
+  },
+  "titleBar": {
+    "minimize": "Minimizar",
+    "maximize": "Maximizar",
+    "close": "Cerrar"
+  },
+  "about": {
+    "title": "Acerca de",
+    "subtitle": "Información de la aplicación y actualizaciones",
+    "version": "Versión",
+    "description": "Organización de archivos inteligente y sencilla para todos. Organiza automáticamente tus descargas, escritorio y cualquier carpeta con potentes reglas.",
+    "license": "Licencia",
+    "openSource": "Código abierto bajo Apache 2.0",
+    "madeWith": "Creado con Tauri, React y Rust",
+    "inspiredBy": "Inspirado en File Arbor",
+    "acknowledgements": "Agradecimientos",
+    "updates": "Actualizaciones",
+    "checkForUpdates": "Buscar actualizaciones",
+    "checkForUpdatesDesc": "Comprobar si hay nuevas versiones de File Arbor",
+    "checkingForUpdates": "Buscando actualizaciones...",
+    "checking": "Comprobando...",
+    "upToDate": "¡Estás al día!",
+    "updateAvailable": "La versión {{version}} está disponible",
+    "downloadingUpdate": "Descargando actualización... {{progress}}%",
+    "updateReady": "La versión {{version}} está lista para instalar",
+    "installAndRestart": "Instalar y reiniciar",
+    "downloadUpdate": "Descargar actualización",
+    "links": "Enlaces",
+    "website": "Visitar sitio web",
+    "contact": "Contacto y comentarios"
+  },
+  "tour": {
+    "skipTour": "Omitir tour",
+    "letsGo": "¡Vamos!",
+    "next": "Siguiente",
+    "prev": "Anterior",
+    "done": "Empezar",
+    "step1Title": "¡Bienvenido a File Arbor!",
+    "step1Desc": "Déjame mostrarte cómo organizar tus archivos en 30 segundos.",
+    "step2Title": "Añade una carpeta",
+    "step2Desc": "Empieza añadiendo una carpeta como Descargas o Escritorio que necesite organizarse.",
+    "step3Title": "Configura las reglas",
+    "step3Desc": "Elige qué tipos de archivos organizar: Imágenes, Documentos, Vídeos y más.",
+    "step4Title": "Personaliza los ajustes",
+    "step4Desc": "Cambia el tema, el idioma y cómo se gestionan los conflictos.",
+    "step5Title": "¡Todo listo!",
+    "step5Desc": "Añade una carpeta, elige tus reglas y haz clic en Ejecutar. ¡Así de simple!"
+  },
+  "time": {
+    "hoursMinutes": "{{hours}}h {{minutes}}m",
+    "minutesOnly": "{{minutes}}m",
+    "hoursOnly": "{{hours}}h"
+  },
+  "subfolder": {
+    "explainer": {
+      "title": "Acerca del escaneo de subcarpetas",
+      "intro": "File Arbor ahora también puede escanear dentro de subcarpetas. Cada regla decide cómo los archivos coincidentes llegan al destino.",
+      "flattenHeading": "Mover todos los archivos juntos (predeterminado)",
+      "flattenBody": "Los archivos coincidentes van al destino, ignorando las subcarpetas de origen.",
+      "preserveHeading": "Mantener estructura de subcarpetas",
+      "preserveBody": "La jerarquía de subcarpetas se recrea bajo el destino.",
+      "gotIt": "Entendido"
+    },
+    "firstRun": {
+      "title": "Confirmar primer escaneo",
+      "warningTitle": "Advertencia de pérdida de datos",
+      "summary_one": "Se organizará {{count}} archivo",
+      "summary_other": "Se organizarán {{count}} archivos",
+      "statsLine": "{{folders}} carpetas · profundidad alcanzada: {{depth}}",
+      "noMatches": "Ningún archivo coincide con sus reglas actuales todavía.",
+      "sampleHeading": "Movimientos de muestra",
+      "dontShowAgain": "No volver a mostrar para esta carpeta",
+      "run": "Ejecutar",
+      "cancel": "Cancelar",
+      "overwriteWarning": "Su comportamiento de conflicto está configurado como 'Sobrescribir'. Si las subcarpetas contienen archivos con el mismo nombre, el archivo anterior se sobrescribirá y se pueden perder datos.",
+      "runWithRename": "Ejecutar este escaneo con 'Renombrar'",
+      "changeSetting": "Cambiar configuración",
+      "continueAnyway": "Continuar de todos modos",
+      "truncatedWarning": "Esta carpeta tiene más de {{max}} archivos, así que el escaneo se detuvo antes. Excluye algunas subcarpetas para acotarlo y verlo todo."
+    }
+  },
+  "subfolderPanel": {
+    "question": "¿Cómo deben organizarse los archivos de las subcarpetas?",
+    "flattenTitle": "Apilar juntos",
+    "preserveTitle": "Mantener estructura",
+    "exampleSource": "Reports/2024/q1.pdf",
+    "exampleFlatten": "Documents/q1.pdf",
+    "examplePreserve": "Documents/Reports/2024/q1.pdf",
+    "excludeTitle": "Carpetas o archivos excluidos",
+    "excludeTitleFilesOnly": "Archivos excluidos",
+    "excludeHint": "Las carpetas y archivos que elijas aquí se omiten al organizar esta carpeta. Puedes seleccionar varios a la vez.",
+    "addExclude": "Añadir carpetas",
+    "addExcludeFile": "Añadir archivos",
+    "removeExclude": "Quitar {{path}} de las exclusiones",
+    "excludeEmpty": "Aún no hay carpetas ni archivos excluidos."
+  },
+  "errors": {
+    "folderNotFound": "Carpeta no encontrada",
+    "noRulesAssigned": "No hay reglas asignadas a esta carpeta",
+    "noRulesEnabled": "No se encontraron reglas activas",
+    "previewFailed": "Vista previa falló",
+    "subfoldersProOnly": "El escaneo de subcarpetas es una función Pro.",
+    "subfoldersNotEnabled": "El escaneo de subcarpetas no está activado para esta carpeta.",
+    "subfoldersRequireManualMode": "Desactiva el modo Auto antes de activar el escaneo de subcarpetas.",
+    "autoModeConflictsWithSubfolders": "El modo Auto no se puede usar mientras el escaneo de subcarpetas está activado.",
+    "invalidDestination": "La ruta de destino no es válida.",
+    "invalidDestinationTraversal": "La destino no puede contener segmentos '..'.",
+    "invalidDestinationProtected": "El destino apunta a una carpeta del sistema protegida.",
+    "organizeAlreadyRunning": "Ya hay una operación de organización en curso para esta carpeta.",
+    "invalidSessionId": "Sesión no válida.",
+    "undoLogNotFound": "Datos de deshacer no encontrados.",
+    "organizeNotFound": "Operación no encontrada.",
+    "watchedFolderProtected": "Esta carpeta no se puede vigilar — es una ubicación protegida del sistema.",
+    "watchedFolderInvalid": "Esta carpeta no se puede vigilar.",
+    "dialogTitle": "Acción fallida",
+    "generic": "Algo salió mal",
+    "SCHEDULED_MODE_PRO_ONLY": "El modo programado es una función Pro.",
+    "AUTO_MODE_CONFLICTS_WITH_SCHEDULE": "Los modos Automático y Programado no pueden estar activos al mismo tiempo.",
+    "SCHEDULE_INVALID": "La programación es inválida. Selecciona al menos un día y una hora válida.",
+    "SCHEDULED_REQUIRES_AUTO_OFF": "Detén el observador antes de cambiar al modo programado.",
+    "invalidLicenseFormat": "Formato de clave de licencia inválido.",
+    "excludeOutsideRoot": "Elige una carpeta dentro de la carpeta vigilada.",
+    "invalidDestinationToken": "El destino usa un token desconocido. Elige uno de la lista.",
+    "invalidDestinationTokenFormat": "Un formato de fecha u hora no es válido. Usa el menú de tokens o formatos en minúscula como yyyy.mm.dd."
+  },
+  "progress": {
+    "scanning": "Escaneando… {{folders}} carpetas, {{files}} archivos encontrados",
+    "organizing": "Organizando… {{count}} archivos movidos",
+    "cancel": "Cancelar"
+  },
+  "cancel": {
+    "confirmTitle": "Operación cancelada",
+    "confirmMessage": "¿Deshacer los {{count}} archivos movidos?",
+    "undoYes": "Sí, deshacer",
+    "undoNo": "No, dejarlos así",
+    "dailyLimitNote": "Nota: deshacer no ajustará el conteo de uso diario de hoy."
+  },
+  "undo": {
+    "progress": "Deshaciendo… {{current}} / {{total}} ({{percent}} %)"
+  },
+  "history": {
+    "title": "Historial de actividad",
+    "subtitle": "Todos los archivos que FileGrove ha procesado, del más reciente al más antiguo",
+    "clearAll": "Borrar todo",
+    "clearConfirm": "¿Eliminar todo el historial de actividad? Esta acción no se puede deshacer.",
+    "empty": "Aún no hay actividad",
+    "emptyDesc": "Cuando organices archivos, aparecerán aquí.",
+    "filterAll": "Todo",
+    "filterSuccess": "Correctos",
+    "filterFailure": "Con errores",
+    "trashHint": "Puede restaurarse manualmente desde la papelera.",
+    "deletedNoUndo": "Eliminado permanentemente — no se puede deshacer.",
+    "commandRuns": "Ejecuciones de comandos",
+    "commandFailed": "Comando fallido",
+    "commandTimedOut": "Tiempo agotado",
+    "commandOutput": "Salida",
+    "exitCode": "Código de salida {{code}}",
+    "noOutput": "(sin salida)",
+    "searchPlaceholder": "Buscar archivo o regla…"
+  },
+  "organize": {
+    "summary": {
+      "trashed": "{{count}} archivo(s) movido(s) a la papelera",
+      "deleted": "{{count}} archivo(s) eliminado(s) permanentemente",
+      "commandsRun": "{{count}} comando(s) ejecutado(s)",
+      "commandsFailed": "{{count}} comando(s) fallido(s)",
+      "viewCommandRuns": "Ver ejecuciones de comandos"
+    }
+  },
+  "sort": {
+    "byName": "Ordenar por nombre (A–Z)",
+    "byCreated": "Volver al orden de creación"
+  },
+  "activity": {
+    "title": "Historial",
+    "subtitle": "Todo lo que hicieron tus reglas: movimientos, eliminaciones y comandos. Guardado en este equipo.",
+    "filterAll": "Todo",
+    "file": "Archivo",
+    "empty": "Aún no hay actividad",
+    "emptyHint": "Ejecuta una regla y cada acción aparecerá aquí.",
+    "emptyCta": "Ir a Reglas",
+    "total": "{{count}} registro(s)",
+    "perPage": "Por página",
+    "prevPage": "Página anterior",
+    "nextPage": "Página siguiente",
+    "pageOf": "Página {{page}} / {{pages}}",
+    "selectAll": "Seleccionar todo",
+    "clearAll": "Borrar todo",
+    "clearAllConfirm": "¿Eliminar todo el historial?",
+    "deleteSelected": "Eliminar seleccionados ({{count}})",
+    "rule": "Regla: {{name}}",
+    "unknownRule": "(desconocida)",
+    "noMatches": "Ninguna actividad coincide con tus filtros.",
+    "clearFilters": "Limpiar filtros"
+  },
+  "update": {
+    "available": "Version {{version}} ist verfügbar",
+    "downloading": "Update wird heruntergeladen... {{progress}}%",
+    "ready": "Version {{version}} bereit zur Installation",
+    "downloadNow": "Herunterladen",
+    "installNow": "Installieren & Neustarten",
+    "later": "Später"
+  }
+}

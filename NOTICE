@@ -1,0 +1,63 @@
+FileGrove
+Copyright 2026 FileGrove Contributors
+
+This product includes software developed as a clean-room reimplementation
+inspired by File Arbor (https://github.com/furkanbagci34/file-arbor-releases)
+by Furkan Bagci. No code from the original product was copied; this
+implementation is based solely on observed behavior of the original
+binary release.
+
+================================================================================
+
+NOTICE FOR DOWNSTREAM DISTRIBUTORS
+
+If you distribute a modified version of FileGrove, you must:
+
+1. Include a copy of the Apache License 2.0 (see LICENSE file).
+2. Cause modified files to carry prominent notices stating that you
+   changed the files.
+3. Retain this NOTICE file in the Source form of any Derivative Works
+   you distribute.
+4. Do not use the "FileGrove" trademark to endorse or promote your
+   derivative without prior written permission from the project
+   maintainers, except as required to describe the origin of the work.
+
+================================================================================
+
+THIRD-PARTY NOTICES
+
+This software depends on the following open-source projects:
+
+Backend (Rust):
+  - tauri           — Apache 2.0     — https://tauri.app
+  - serde           - MIT/Apache 2.0 — https://serde.rs
+  - tokio           — MIT            — https://tokio.rs
+  - rusqlite        — MIT            — https://github.com/rusqlite/rusqlite
+  - notify          — CC0 1.0        — https://github.com/notify-rs/notify
+  - chrono          — MIT/Apache 2.0 — https://github.com/chronotope/chrono
+  - tracing         — MIT            — https://github.com/tokio-rs/tracing
+  - anyhow          — MIT/Apache 2.0 — https://github.com/dtolnay/anyhow
+  - thiserror       — MIT/Apache 2.0 — https://github.com/dtolnay/thiserror
+  - uuid            — MIT/Apache 2.0 — https://github.com/uuid-rs/uuid
+
+Frontend (TypeScript/React):
+  - react           — MIT            — https://react.dev
+  - zustand         — MIT            — https://github.com/pmndrs/zustand
+  - tailwindcss     — MIT            — https://tailwindcss.com
+  - lucide-react    — ISC            — https://lucide.dev
+  - i18next         — MIT            — https://www.i18next.com
+  - react-i18next   — MIT            — https://react.i18next.com
+  - vite            — MIT            — https://vitejs.dev
+  - typescript      — Apache 2.0     — https://www.typescriptlang.org
+
+Each dependency retains its own license; see each project's repository
+for full terms.
+
+================================================================================
+
+The Spanish locale catalog (src/i18n/locales/es.json) was derived from
+publicly observable UI strings in File Arbor v1.1.2. These are short
+descriptive phrases (labels, button captions, error messages) that are
+functional in nature and not subject to copyright protection. The
+selection and arrangement of these strings, along with all surrounding
+code, is original work of FileGrove Contributors.

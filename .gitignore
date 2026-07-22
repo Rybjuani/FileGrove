@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+target/
+dist/
+build/
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test artifacts
+coverage/
+.turbo/
+.next/
+
+# Local env
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+*.tsbuildinfo
+nexus-cache/

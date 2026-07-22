@@ -1,0 +1,379 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "run": "Run",
+    "pause": "Pause",
+    "resume": "Resume",
+    "yes": "Yes"
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "rules": "Rules",
+    "settings": "Settings",
+    "license": "License",
+    "about": "About",
+    "freePlan": "Free Plan",
+    "folderLimit": "1 folder, 2 rules",
+    "upgradePro": "Upgrade to Pro",
+    "proBadge": "Pro",
+    "history": "History"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Manage your watched folders and organization rules",
+    "addFolder": "Add folder",
+    "noFolders": "No folders added yet",
+    "noFoldersDesc": "Add a folder to start organizing your files. Each folder can have its own rules and run in manual or automatic mode.",
+    "addFirstFolder": "Add your first folder",
+    "rulesActive": "{{enabled}} of {{total}} rules active",
+    "successOrganized": "Successfully organized {{count}} file(s)!",
+    "partialOrganized": "{{moved}} file(s) organized, {{failed}} failed.",
+    "failedOrganize": "Failed to organize files.",
+    "searchPlaceholder": "Search folders…",
+    "noMatches": "No folders match \"{{query}}\"."
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Customize your file organization experience",
+    "appearance": "Appearance",
+    "theme": "Theme",
+    "dark": "Dark",
+    "light": "Light",
+    "system": "System",
+    "language": "Language",
+    "languageDesc": "Select your preferred language",
+    "startup": "Startup",
+    "launchAtStartup": "Launch at startup",
+    "launchAtStartupDesc": "Start FileGrove automatically when you log in",
+    "behavior": "Behavior",
+    "minimizeToTray": "Minimize to tray",
+    "minimizeToTrayDesc": "Keep FileGrove running in the system tray when the window is closed",
+    "showTrayIcon": "Show tray icon",
+    "showTrayIconDesc": "Display the system tray icon",
+    "notifications": "Notifications",
+    "notificationsDesc": "Show desktop notifications for organize events",
+    "conflictBehavior": "Conflict behavior",
+    "conflictBehaviorDesc": "What to do when a file with the same name already exists at the destination",
+    "overwrite": "Overwrite",
+    "rename": "Rename",
+    "skip": "Skip",
+    "sortOrder": "Sort order",
+    "created": "By creation date",
+    "name": "By name",
+    "rulesSortOrder": "Rules sort order",
+    "foldersSortOrder": "Folders sort order",
+    "subfolders": "Subfolders",
+    "subfolderDefaults": "Default subfolder settings",
+    "maxDepth": "Maximum depth",
+    "excludeFolders": "Default exclude folders",
+    "excludePatterns": "Default exclude patterns",
+    "data": "Data",
+    "openDataDirectory": "Open data directory",
+    "resetOnboarding": "Reset onboarding tour",
+    "resetOnboardingConfirm": "Reset the onboarding tour? It will be shown again on next launch.",
+    "checkForUpdates": "Check for updates"
+  },
+  "rules": {
+    "title": "Rules",
+    "subtitle": "Manage your organization rules. Assign rules to folders from the Dashboard.",
+    "newRule": "New rule",
+    "noCustomRules": "No custom rules yet",
+    "createFirst": "Click \"New rule\" to create your first custom rule.",
+    "createFirstCta": "+ New rule",
+    "editRule": "Edit rule",
+    "createRule": "Create new rule",
+    "ruleName": "Rule name",
+    "destination": "Destination folder",
+    "extensions": "Extensions",
+    "contains": "Contains",
+    "startsWith": "Starts with",
+    "endsWith": "Ends with",
+    "regex": "Regex pattern",
+    "sizeGreaterThan": "Size greater than (MB)",
+    "sizeLessThan": "Size less than (MB)",
+    "olderThan": "Older than (days)",
+    "newerThan": "Newer than (days)",
+    "addCondition": "Add condition",
+    "selectDestination": "Select destination",
+    "createRuleBtn": "Create rule",
+    "saveChanges": "Save changes",
+    "enable": "Enable",
+    "disable": "Disable",
+    "noConditions": "No conditions set",
+    "quickRule": {
+      "resetToDefault": "Reset to default",
+      "action": {
+        "duplicate": "Duplicate and edit"
+      }
+    },
+    "extensionEditor": {
+      "placeholder": "e.g. .pdf",
+      "minOne": "At least one extension required"
+    },
+    "condition": {
+      "size": { "B": "B", "KB": "KB", "MB": "MB", "GB": "GB" },
+      "age": { "day": "Day", "week": "Week", "month": "Month", "year": "Year" },
+      "regex": { "invalid": "Invalid regex: {{message}}" }
+    },
+    "form": {
+      "label": {
+        "questionHeader": "Which files should this rule apply to?",
+        "destination": "Move to",
+        "name": "Name (optional)",
+        "allOfThese": "When ALL of these conditions are met:",
+        "icon": "Icon"
+      },
+      "placeholders": {
+        "extension": "e.g. .pdf, .doc, .txt",
+        "nameContains": "e.g. report, invoice, backup",
+        "nameStartsWith": "e.g. IMG_, DOC_, temp",
+        "nameEndsWith": "e.g. _final, _backup, _v2",
+        "regex": "e.g. ^IMG_\\d+\\.jpg$",
+        "sizeGreaterThan": "e.g. 100 (MB)",
+        "sizeLessThan": "e.g. 10 (MB)",
+        "olderThan": "e.g. 30 (days)",
+        "newerThan": "e.g. 7 (days)"
+      },
+      "addCondition": "Add condition",
+      "removeCondition": "Remove condition",
+      "maxConditionsReached": "Max {{max}} conditions",
+      "conditionRowLabel": "Condition {{index}}"
+    },
+    "action": {
+      "label": "Then",
+      "move": "Move to folder",
+      "trash": "Move to trash",
+      "delete": "Delete permanently"
+    },
+    "searchPlaceholder": "Search rules…",
+    "noMatches": "No rules match the filters."
+  },
+  "folderCard": {
+    "folderName": "Folder name",
+    "watchedPath": "Watched path",
+    "rules": "Rules",
+    "noRules": "No rules assigned",
+    "addRules": "Add rules",
+    "mode": {
+      "label": "Mode",
+      "single": "Manual",
+      "singleDesc": "Organize on demand",
+      "auto": "Automatic",
+      "autoDesc": "Organize new files instantly",
+      "scheduled": "Scheduled",
+      "scheduledDesc": "Organize on a schedule"
+    },
+    "watcher": {
+      "stopped": "Stopped",
+      "running": "Watching",
+      "paused": "Paused"
+    },
+    "actions": {
+      "organize": "Organize now",
+      "organizing": "Organizing…",
+      "watch": "Start watching",
+      "stop": "Stop watching",
+      "pause": "Pause",
+      "resume": "Resume",
+      "rename": "Rename",
+      "remove": "Remove",
+      "preview": "Preview"
+    },
+    "recursive": "Recursive",
+    "schedule": "Schedule"
+  },
+  "tray": {
+    "watching": "Watching: {{folders}}",
+    "paused": "Paused",
+    "notWatching": "Not watching",
+    "lastFile": "Last: {{file}}",
+    "noRecentActivity": "No recent activity",
+    "todayCount": "Today: {{count}} files organized",
+    "openApp": "Open FileGrove",
+    "pauseAll": "Pause all",
+    "resumeAll": "Resume all",
+    "quit": "Quit"
+  },
+  "notifications": {
+    "filesOrganized": "{{count}} file(s) organized",
+    "movedTo": "Moved to {{destination}}",
+    "fileMovedTo": "{{filename}} moved to {{destination}}",
+    "filesMovedTo": "{{count}} files moved to {{destination}}",
+    "filesOrganizedMultiple": "{{count}} files organized"
+  },
+  "quickRules": {
+    "images": "Images",
+    "imagesDesc": "Organizes image files: JPG, PNG, GIF, WebP, SVG, and more",
+    "documents": "Documents",
+    "documentsDesc": "Organizes documents: PDF, Word, Excel, PowerPoint, and text files",
+    "videos": "Videos",
+    "videosDesc": "Organizes video files: MP4, MKV, AVI, MOV, and more",
+    "audio": "Audio",
+    "audioDesc": "Organizes audio files: MP3, WAV, FLAC, AAC, and more",
+    "archives": "Archives",
+    "archivesDesc": "Organizes compressed files: ZIP, RAR, 7Z, TAR, and more",
+    "installers": "Installers",
+    "installersDesc": "Organizes installer files: EXE, MSI, DMG, and app packages",
+    "resetAll": "Reset all quick rules",
+    "resetConfirm": "Reset all quick rules to their defaults?"
+  },
+  "permissions": {
+    "title": "Folder access required",
+    "description": "FileGrove needs permission to access",
+    "instructions": "To grant access:",
+    "step1": "Open System Settings > Privacy & Security > Files and Folders",
+    "step2": "Find FileGrove in the list",
+    "step3": "Enable the toggle next to it",
+    "step4": "Restart FileGrove",
+    "openSettings": "Open System Settings",
+    "retry": "Retry",
+    "cancel": "Cancel"
+  },
+  "titleBar": {
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "close": "Close"
+  },
+  "about": {
+    "title": "About FileGrove",
+    "version": "Version",
+    "description": "Smart, simple file organization for everyone",
+    "author": "Author",
+    "license": "License",
+    "website": "Website",
+    "github": "GitHub",
+    "privacy": "Privacy",
+    "acknowledgements": "Acknowledgements",
+    "inspiredBy": "Inspired by File Arbor",
+    "openSource": "Open source under Apache 2.0",
+    "madeWith": "Made with Tauri, React, and Rust"
+  },
+  "tour": {
+    "welcome": {
+      "title": "Welcome to FileGrove",
+      "desc": "FileGrove organizes your files automatically. Let's take a quick tour."
+    },
+    "addFolder": {
+      "title": "Add a folder",
+      "desc": "Click here to add a folder you want to organize."
+    },
+    "rules": {
+      "title": "Create rules",
+      "desc": "Head to the Rules page to define what files go where."
+    },
+    "organize": {
+      "title": "Organize",
+      "desc": "Click \"Organize now\" on any folder to run your rules."
+    },
+    "complete": "You're all set! FileGrove will keep your folders tidy."
+  },
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "{{count}} min ago",
+    "hoursAgo": "{{count}} h ago",
+    "daysAgo": "{{count}} d ago"
+  },
+  "subfolder": {
+    "enabled": "Scan subfolders",
+    "disabled": "Top-level only"
+  },
+  "subfolderPanel": {
+    "title": "Subfolders",
+    "enabled": "Scan subfolders recursively",
+    "enabledDesc": "Walk into subfolders when organizing",
+    "disabled": "Disabled",
+    "maxDepth": "Max depth",
+    "unlimited": "Unlimited",
+    "excludeFolders": "Exclude folders",
+    "excludeFoldersDesc": "Subfolders to skip when scanning",
+    "excludePatterns": "Exclude patterns",
+    "excludePatternsDesc": "Glob patterns to skip when scanning",
+    "destinationMode": "Destination mode",
+    "flatten": "Flatten (all files into root)",
+    "preserve": "Preserve (keep subfolder structure)"
+  },
+  "errors": {
+    "generic": "Something went wrong",
+    "folderNotFound": "Folder not found",
+    "noRulesAssigned": "No rules assigned to this folder",
+    "noRulesEnabled": "All rules assigned to this folder are disabled",
+    "subfoldersNotEnabled": "Recursive scan is disabled for this folder",
+    "subfoldersRequireManualMode": "Recursive scan requires manual mode",
+    "excludeOutsideRoot": "Exclude path is outside the watched root",
+    "autoModeConflictsWithSubfolders": "Auto mode does not support subfolder scanning",
+    "invalidDestination": "Destination path is invalid",
+    "invalidDestinationTraversal": "Destination contains a path traversal",
+    "invalidDestinationProtected": "Destination is a protected system path",
+    "invalidDestinationToken": "Destination contains an unknown token",
+    "invalidDestinationTokenFormat": "Token has invalid format",
+    "watchedFolderProtected": "Cannot delete a file outside the watched folder",
+    "watchedFolderInvalid": "Watched folder no longer exists",
+    "organizeAlreadyRunning": "An organize session is already running for this folder",
+    "invalidSessionId": "Invalid session ID",
+    "undoLogNotFound": "Undo log not found",
+    "organizeNotFound": "Organize session not found",
+    "userCanceledFolderSelect": "Folder selection was canceled"
+  },
+  "progress": {
+    "scanning": "Scanning…",
+    "organizing": "Organizing…"
+  },
+  "cancel": {
+    "title": "Cancel organize?",
+    "desc": "Files already moved will stay where they are.",
+    "confirm": "Yes, cancel",
+    "keepGoing": "Keep going"
+  },
+  "undo": {
+    "title": "Undo organize"
+  },
+  "history": {
+    "title": "Activity history",
+    "subtitle": "Every file FileGrove has touched, newest first",
+    "empty": "No activity yet",
+    "emptyDesc": "Once you organize files, you'll see them here.",
+    "search": "Search activity…",
+    "filterAll": "All",
+    "filterSuccess": "Successes only",
+    "filterFailures": "Failures only",
+    "clearAll": "Clear all",
+    "clearConfirm": "Delete all activity history? This cannot be undone.",
+    "deleteSelected": "Delete selected"
+  },
+  "organize": {
+    "title": "Organize"
+  },
+  "sort": {
+    "byDate": "By date",
+    "byName": "By name"
+  },
+  "activity": {
+    "moved": "Moved",
+    "trashed": "Trashed",
+    "deleted": "Deleted",
+    "commandRan": "Command ran",
+    "to": "to",
+    "exitCode": "Exit code",
+    "duration": "Duration",
+    "output": "Output",
+    "noOutput": "No output",
+    "rule": "Rule",
+    "file": "File"
+  },
+  "update": {
+    "available": "Update available",
+    "newVersion": "Version {{version}} is available",
+    "download": "Download",
+    "downloading": "Downloading…",
+    "downloaded": "Downloaded",
+    "install": "Install and restart",
+    "installing": "Installing…",
+    "upToDate": "FileGrove is up to date",
+    "checkAgain": "Check again",
+    "error": "Update failed: {{message}}"
+  }
+}
