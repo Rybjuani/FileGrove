@@ -345,7 +345,14 @@
       "organizing": "Organizando…",
       "watch": "Iniciar vigilancia",
       "stop": "Detener vigilancia",
-      "remove": "Eliminar"
+      "remove": "Eliminar",
+      "pause": "Pausar",
+      "resume": "Reanudar",
+      "cancel": "Cancelar",
+      "cancelling": "Cancelando…",
+      "cancelled": "Cancelado después de organizar {{count}} archivo(s)",
+      "undo": "Deshacer",
+      "undone": "Se restauraron {{count}} archivo(s); {{failed}} fallaron"
     },
     "noRulesEmpty": "Aún no hay reglas para esta carpeta",
     "addRule": "Añadir regla",

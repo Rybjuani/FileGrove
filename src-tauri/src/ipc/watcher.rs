@@ -14,7 +14,7 @@ pub async fn start(
         Ok(Some(f)) => f,
         _ => return Ok(json!({ "success": false, "error": "FOLDER_NOT_FOUND" })),
     };
-    match state.watcher.start_watching(&app, &folder) {
+    match state.watcher.start_watching_and_catch_up(&app, &folder) {
         Ok(()) => Ok(json!({ "success": true })),
         Err(e) => Ok(json!({ "success": false, "error": e.to_string() })),
     }

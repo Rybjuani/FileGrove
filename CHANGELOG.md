@@ -13,13 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Domain types: `Folder`, `Rule`, `Condition`, `Action`, `Schedule`,
   `Activity`, `UndoEntry`
 - Rule engine: condition matcher, plan computation, action executor
-  (move/trash/delete; runCommand stubbed for v0.2.0)
+  (move/delete; trash and runCommand remain pending)
 - Path token resolver (date/filename/path tokens; EXIF tokens stubbed
   for v0.2.0)
-- Watcher service (notify-debouncer-full; events enqueued but not yet
-  dispatched to organizer — lands in M4)
-- Scheduler service (tokio-cron-scheduler; cron expressions built but
-  no organize action wired — lands in M7)
+- Watcher service with functional pause/resume and startup restoration
+- Local-time scheduler with startup restoration and next-run reporting
+- Cooperative organization cancellation and populated undo sessions
+- Schedule controls for enablement, weekdays, time, and next execution
 - Tray icon with Open/Pause All/Resume All/Quit menu
 - IPC handlers for: app, folders, rules, files, organize, watcher,
   settings, activity, permissions
@@ -33,14 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/M1_ISSUES.md` — M1 milestone breakdown
 
 ### Known limitations
-- Rule engine executes `move`/`trash`/`delete`; `runCommand` returns
-  `RUN_COMMAND_NOT_IMPLEMENTED`
+- `trash` and `runCommand` actions are not implemented yet
 - EXIF tokens (`{camera}`, `{lens}`, etc.) resolve to empty (dropped
   from path); EXIF reading lands in v0.2.0
-- Watcher receives events but does not enqueue organize jobs yet (M4)
-- Scheduler registers cron jobs but the tick handler is a stub (M7)
-- Undo log is written but not populated by the executor yet (M8)
-- Auto-update plugin is registered but `updater:check` IPC not exposed
+- Automatic updates are intentionally excluded during local testing
 
 ## [0.1.0-alpha.1] — TBD
 

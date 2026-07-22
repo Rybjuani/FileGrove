@@ -5,7 +5,17 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import type { Folder, Rule, Settings, ActivityEntry, IpcResponse, OrganizeResult } from './types';
+import type {
+  Folder,
+  Rule,
+  Settings,
+  ActivityEntry,
+  IpcResponse,
+  OrganizeResult,
+  OrganizeStarted,
+  OrganizeProgress,
+  OrganizeDone,
+} from './types';
 
 export const ipc = {
   files: {
@@ -23,12 +33,15 @@ export const ipc = {
     organizeRecursive: (folderPath: string, opts?: Record<string, unknown>) =>
       invoke<IpcResponse<OrganizeResult>>('organize_recursive', { folderPath, opts }),
     cancelOrganize: (sessionId: string) => invoke<IpcResponse>('cancel', { sessionId }),
-    undoOrganize: (sessionId: string) => invoke<IpcResponse>('undo', { sessionId }),
+    undoOrganize: (sessionId: string) =>
+      invoke<IpcResponse<{ done: number; failed: number; total: number }>>('undo', { sessionId }),
     dismissUndo: (sessionId: string) => invoke<IpcResponse>('dismiss_undo', { sessionId }),
-    onProgress: (cb: (data: unknown) => void): Promise<UnlistenFn> =>
-      listen('organize:progress', (e) => cb(e.payload)),
-    onDone: (cb: (data: unknown) => void): Promise<UnlistenFn> =>
-      listen('organize:done', (e) => cb(e.payload)),
+    onStarted: (cb: (data: OrganizeStarted) => void): Promise<UnlistenFn> =>
+      listen('organize:started', (e) => cb(e.payload as OrganizeStarted)),
+    onProgress: (cb: (data: OrganizeProgress) => void): Promise<UnlistenFn> =>
+      listen('organize:progress', (e) => cb(e.payload as OrganizeProgress)),
+    onDone: (cb: (data: OrganizeDone) => void): Promise<UnlistenFn> =>
+      listen('organize:done', (e) => cb(e.payload as OrganizeDone)),
   },
 
   folders: {
@@ -47,6 +60,8 @@ export const ipc = {
       invoke<IpcResponse<Folder>>('update_subfolders_config', { id, config }),
     updateSchedule: (id: string, schedule: unknown) =>
       invoke<IpcResponse<Folder>>('update_schedule', { id, schedule }),
+    getNextRun: (id: string) =>
+      invoke<IpcResponse<{ nextRun: string | null }>>('get_next_run', { id }),
     selectDestination: () => invoke<IpcResponse<string>>('select_destination'),
     confirmFirstRun: (id: string) => invoke<IpcResponse<Folder>>('confirm_first_run', { id }),
   },

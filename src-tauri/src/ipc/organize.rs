@@ -5,10 +5,10 @@ use uuid::Uuid;
 use crate::AppState;
 
 #[tauri::command]
-pub async fn cancel(_state: State<'_, AppState>, session_id: Uuid) -> Result<Value, String> {
-    // Cooperative cancellation via a session registry
-    tracing::info!(?session_id, "organize cancel requested");
-    Ok(json!({ "success": true }))
+pub async fn cancel(state: State<'_, AppState>, session_id: Uuid) -> Result<Value, String> {
+    let active = state.cancellations.cancel(session_id);
+    tracing::info!(?session_id, active, "organize cancel requested");
+    Ok(json!({ "success": true, "data": { "active": active } }))
 }
 
 #[tauri::command]

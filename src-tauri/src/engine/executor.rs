@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use crate::domain::action::Action;
 use crate::domain::activity::{ActivityEntry, ActivityType};
+use crate::domain::undo::UndoEntry;
 use crate::engine::matcher::FileItem;
 use crate::paths::tokens::resolve_destination;
 use crate::storage::Database;
@@ -43,6 +44,7 @@ pub struct ActionResult {
 
 pub struct Organizer<'a> {
     pub db: &'a Database,
+    pub session_id: Uuid,
     pub scan_root: PathBuf,
     pub conflict_behavior: ConflictBehavior,
 }
@@ -70,6 +72,7 @@ impl<'a> Organizer<'a> {
             }
         };
 
+        self.record_undo(file, action, &result);
         self.record_activity(file, action, rule_id, rule_name, &result);
         result
     }
@@ -241,6 +244,25 @@ impl<'a> Organizer<'a> {
         };
         if let Err(e) = self.db.activity().insert(&entry) {
             tracing::warn!("failed to record activity: {e}");
+        }
+    }
+
+    fn record_undo(&self, file: &FileItem, action: &Action, result: &ActionResult) {
+        if !matches!(action, Action::Move { .. }) || !result.success || result.skipped {
+            return;
+        }
+        let Some(new_path) = result.new_path.as_ref().and_then(|path| path.to_str()) else {
+            return;
+        };
+
+        let entry = UndoEntry {
+            session_id: self.session_id,
+            at: Utc::now(),
+            from_path: file.path.clone(),
+            to_path: new_path.to_string(),
+        };
+        if let Err(error) = self.db.undo().append(&entry) {
+            tracing::warn!("failed to record undo entry: {error}");
         }
     }
 }

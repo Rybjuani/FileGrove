@@ -17,8 +17,6 @@ mod scheduler;
 mod storage;
 #[cfg(not(test))]
 mod tray;
-#[cfg(not(test))]
-mod updater;
 mod watcher;
 
 #[cfg(not(test))]
@@ -38,6 +36,7 @@ use crate::storage::Database;
 #[cfg(not(test))]
 pub struct AppState {
     pub db: Arc<Database>,
+    pub cancellations: Arc<engine::cancellation::CancellationRegistry>,
     pub watcher: Arc<watcher::WatcherService>,
     pub scheduler: Arc<scheduler::SchedulerService>,
     pub tray: Arc<RwLock<Option<tray::TrayService>>>,
@@ -67,15 +66,24 @@ pub fn run() {
             db.run_migrations()?;
             let db = Arc::new(db);
 
-            let watcher = Arc::new(watcher::WatcherService::new(db.clone()));
-            let scheduler = Arc::new(scheduler::SchedulerService::new(db.clone()));
+            let cancellations = Arc::new(engine::cancellation::CancellationRegistry::default());
+            let watcher = Arc::new(watcher::WatcherService::new(
+                db.clone(),
+                cancellations.clone(),
+            ));
+            let scheduler = Arc::new(scheduler::SchedulerService::new(
+                db.clone(),
+                cancellations.clone(),
+            ));
             scheduler.set_app_handle(app.handle().clone());
 
-            // Boot scheduler jobs for every folder in scheduled mode.
-            scheduler.init()?;
+            // Restore background services exactly as they were when the app closed.
+            watcher.init(app.handle())?;
+            tauri::async_runtime::block_on(scheduler.init())?;
 
             let state = AppState {
                 db: db.clone(),
+                cancellations,
                 watcher: watcher.clone(),
                 scheduler: scheduler.clone(),
                 tray: Arc::new(RwLock::new(None)),
@@ -113,6 +121,7 @@ pub fn run() {
             ipc::folders::unassign_rules,
             ipc::folders::update_subfolders_config,
             ipc::folders::update_schedule,
+            ipc::folders::get_next_run,
             ipc::folders::select_destination,
             ipc::folders::confirm_first_run,
             // Rules

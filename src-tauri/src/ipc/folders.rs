@@ -57,7 +57,13 @@ pub async fn add(app: AppHandle, state: State<'_, AppState>) -> Result<Value, St
 }
 
 #[tauri::command]
-pub async fn remove(state: State<'_, AppState>, id: Uuid) -> Result<Value, String> {
+pub async fn remove(app: AppHandle, state: State<'_, AppState>, id: Uuid) -> Result<Value, String> {
+    if let Err(error) = state.watcher.stop_watching(&app, id) {
+        return Ok(json!({ "success": false, "error": error.to_string() }));
+    }
+    if let Err(error) = state.scheduler.remove(id).await {
+        return Ok(json!({ "success": false, "error": error.to_string() }));
+    }
     match state.db.folders().delete(id) {
         Ok(()) => Ok(json!({ "success": true })),
         Err(e) => Ok(json!({ "success": false, "error": e.to_string() })),
@@ -84,6 +90,7 @@ pub async fn update_name(
 
 #[tauri::command]
 pub async fn update_mode(
+    app: AppHandle,
     state: State<'_, AppState>,
     id: Uuid,
     mode: String,
@@ -94,10 +101,56 @@ pub async fn update_mode(
     };
     match state.db.folders().get(id) {
         Ok(Some(mut folder)) => {
+            let previous_folder = folder.clone();
             folder.mode = new_mode;
-            match state.db.folders().update(&folder) {
-                Ok(()) => Ok(json!({ "success": true, "data": folder })),
-                Err(e) => Ok(json!({ "success": false, "error": e.to_string() })),
+            if new_mode == FolderMode::Auto {
+                if let Some(schedule) = folder.schedule.as_mut() {
+                    schedule.enabled = false;
+                }
+            }
+            if let Err(error) = state.db.folders().update(&folder) {
+                return Ok(json!({ "success": false, "error": error.to_string() }));
+            }
+
+            let reconcile_result = match new_mode {
+                FolderMode::Single => match state.watcher.stop_watching(&app, id) {
+                    Ok(()) => state.scheduler.remove(id).await,
+                    Err(error) => Err(error),
+                },
+                FolderMode::Auto => match state.scheduler.remove(id).await {
+                    Ok(()) => state.watcher.start_watching_and_catch_up(&app, &folder),
+                    Err(error) => Err(error),
+                },
+                FolderMode::Scheduled => match state.watcher.stop_watching(&app, id) {
+                    Ok(()) => state.scheduler.upsert(id).await.map(|_| ()),
+                    Err(error) => Err(error),
+                },
+            };
+            if let Err(error) = reconcile_result {
+                let _ = state.db.folders().update(&previous_folder);
+                match previous_folder.mode {
+                    FolderMode::Single => {
+                        let _ = state.watcher.stop_watching(&app, id);
+                        let _ = state.scheduler.remove(id).await;
+                    }
+                    FolderMode::Auto => {
+                        let _ = state.scheduler.remove(id).await;
+                        let _ = state
+                            .watcher
+                            .start_watching_and_catch_up(&app, &previous_folder);
+                    }
+                    FolderMode::Scheduled => {
+                        let _ = state.watcher.stop_watching(&app, id);
+                        let _ = state.scheduler.upsert(id).await;
+                    }
+                }
+                return Ok(json!({ "success": false, "error": error.to_string() }));
+            }
+
+            match state.db.folders().get(id) {
+                Ok(Some(updated)) => Ok(json!({ "success": true, "data": updated })),
+                Ok(None) => Ok(json!({ "success": false, "error": "FOLDER_NOT_FOUND" })),
+                Err(error) => Ok(json!({ "success": false, "error": error.to_string() })),
             }
         }
         _ => Ok(json!({ "success": false, "error": "FOLDER_NOT_FOUND" })),
@@ -168,13 +221,22 @@ pub async fn update_schedule(
     id: Uuid,
     schedule: Schedule,
 ) -> Result<Value, String> {
+    if schedule.enabled && schedule.to_cron().is_none() {
+        return Ok(json!({ "success": false, "error": "INVALID_SCHEDULE" }));
+    }
     match state.db.folders().get(id) {
         Ok(Some(mut folder)) => {
+            let previous_schedule = folder.schedule.clone();
             folder.schedule = Some(schedule);
             match state.db.folders().update(&folder) {
                 Ok(()) => {
                     // Reconcile the scheduler job.
-                    let _ = state.scheduler.upsert(id).await;
+                    if let Err(error) = state.scheduler.upsert(id).await {
+                        folder.schedule = previous_schedule;
+                        let _ = state.db.folders().update(&folder);
+                        let _ = state.scheduler.upsert(id).await;
+                        return Ok(json!({ "success": false, "error": error.to_string() }));
+                    }
                     Ok(json!({ "success": true, "data": folder }))
                 }
                 Err(e) => Ok(json!({ "success": false, "error": e.to_string() })),
@@ -182,6 +244,12 @@ pub async fn update_schedule(
         }
         _ => Ok(json!({ "success": false, "error": "FOLDER_NOT_FOUND" })),
     }
+}
+
+#[tauri::command]
+pub async fn get_next_run(state: State<'_, AppState>, id: Uuid) -> Result<Value, String> {
+    let next_run = state.scheduler.next_run(id).map(|run| run.to_rfc3339());
+    Ok(json!({ "success": true, "data": { "nextRun": next_run } }))
 }
 
 #[tauri::command]

@@ -76,10 +76,11 @@ the current roadmap. v0.1.0 (MVP) targets:
 
 - Folder watching + rule engine + manual/auto/scheduled organize
 - Recursive scan, undo log, activity history
-- Tray integration, onboarding tour, auto-update
+- Tray integration and onboarding tour
 - English + Spanish localization
 
-Postponed to v0.2.0: EXIF-based sorting, run-command action.
+Postponed until after local testing: EXIF-based sorting and run-command action.
+Automatic updates are intentionally out of scope while FileGrove is used locally.
 
 ## Contributing
 

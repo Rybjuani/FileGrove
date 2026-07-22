@@ -102,5 +102,25 @@ export interface IpcResponse<T = unknown> {
 
 export interface OrganizeResult {
   sessionId: string;
+  cancelled: boolean;
+  undoCount: number;
   stats: { done: number; failed: number; total: number };
+}
+
+export interface OrganizeStarted {
+  sessionId: string;
+  folderPath: string;
+}
+
+export interface OrganizeProgress extends OrganizeStarted {
+  done: number;
+  failed: number;
+  processed: number;
+  total: number;
+}
+
+export interface OrganizeDone extends OrganizeStarted {
+  cancelled: boolean;
+  stats: { done: number; failed: number; total: number };
+  error?: string;
 }

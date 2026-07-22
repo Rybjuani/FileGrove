@@ -29,7 +29,6 @@
     "os:default",
     "process:allow-exit",
     "process:allow-restart",
-    "updater:default",
     "notification:default",
     "autostart:default",
     "log:default"

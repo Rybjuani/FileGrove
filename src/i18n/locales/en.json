@@ -181,10 +181,34 @@
       "resume": "Resume",
       "rename": "Rename",
       "remove": "Remove",
-      "preview": "Preview"
+      "preview": "Preview",
+      "cancel": "Cancel",
+      "cancelling": "Cancelling…",
+      "cancelled": "Cancelled after organizing {{count}} file(s)",
+      "undo": "Undo",
+      "undone": "Restored {{count}} file(s); {{failed}} failed"
     },
     "recursive": "Recursive",
-    "schedule": "Schedule"
+    "schedule": {
+      "title": "Schedule",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "days": "Days",
+      "time": "Time",
+      "nextRunLabel": "Next run",
+      "notScheduled": "Enable a valid schedule",
+      "statusActive": "Schedule active",
+      "statusDisabled": "Schedule disabled",
+      "day": {
+        "sun": { "short": "Sun", "long": "Sunday" },
+        "mon": { "short": "Mon", "long": "Monday" },
+        "tue": { "short": "Tue", "long": "Tuesday" },
+        "wed": { "short": "Wed", "long": "Wednesday" },
+        "thu": { "short": "Thu", "long": "Thursday" },
+        "fri": { "short": "Fri", "long": "Friday" },
+        "sat": { "short": "Sat", "long": "Saturday" }
+      }
+    }
   },
   "tray": {
     "watching": "Watching: {{folders}}",

@@ -3,24 +3,28 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use chrono::TimeZone;
 use tauri::AppHandle;
 use tokio_cron_scheduler::{Job, JobScheduler};
 use uuid::Uuid;
 
 use crate::domain::FolderMode;
+use crate::engine::cancellation::CancellationRegistry;
 use crate::storage::Database;
 
 pub struct SchedulerService {
     db: Arc<Database>,
+    cancellations: Arc<CancellationRegistry>,
     scheduler: tokio::sync::OnceCell<JobScheduler>,
     jobs: parking_lot::Mutex<std::collections::HashMap<Uuid, uuid::Uuid>>,
     app: parking_lot::Mutex<Option<AppHandle>>,
 }
 
 impl SchedulerService {
-    pub fn new(db: Arc<Database>) -> Self {
+    pub fn new(db: Arc<Database>, cancellations: Arc<CancellationRegistry>) -> Self {
         Self {
             db,
+            cancellations,
             scheduler: tokio::sync::OnceCell::new(),
             jobs: parking_lot::Mutex::new(std::collections::HashMap::new()),
             app: parking_lot::Mutex::new(None),
@@ -45,19 +49,31 @@ impl SchedulerService {
 
     /// Boot-time: register cron jobs for every folder currently in
     /// `scheduled` mode with an enabled schedule.
-    pub fn init(&self) -> Result<()> {
+    pub async fn init(&self) -> Result<usize> {
         let folders = self.db.folders().list()?;
-        let count = folders
-            .iter()
-            .filter(|f| f.mode == FolderMode::Scheduled)
-            .filter(|f| f.schedule.as_ref().is_some_and(|s| s.enabled))
-            .count();
-        tracing::info!("scheduler init: {count} folder(s) to register");
-        Ok(())
+        let mut restored = 0usize;
+        for folder in folders {
+            if folder.mode != FolderMode::Scheduled {
+                continue;
+            }
+            match self.upsert(folder.id).await {
+                Ok(true) => restored += 1,
+                Ok(false) => {}
+                Err(error) => {
+                    tracing::warn!(folder_id = ?folder.id, "could not restore schedule: {error}");
+                }
+            }
+        }
+        tracing::info!("scheduler init: restored {restored} folder(s)");
+        Ok(restored)
     }
 
     /// (Re)register a folder's schedule. Returns true if a job was created.
     pub async fn upsert(&self, folder_id: Uuid) -> Result<bool> {
+        // Always remove an old job first, including when a schedule was
+        // disabled or the folder changed to another mode.
+        self.remove(folder_id).await?;
+
         let folder = match self.db.folders().get(folder_id)? {
             Some(f) => f,
             None => return Ok(false),
@@ -74,16 +90,16 @@ impl SchedulerService {
             None => return Ok(false),
         };
 
-        self.remove(folder_id).await?;
-
         let scheduler = self.get_scheduler().await?;
         let fid = folder_id;
         let db = self.db.clone();
+        let cancellations = self.cancellations.clone();
         let app_handle = self.app.lock().clone();
 
-        let job = Job::new_async(cron.as_str(), move |_uuid, _l| {
+        let job = Job::new_async_tz(cron.as_str(), chrono::Local, move |_uuid, _l| {
             let fid = fid;
             let db = db.clone();
+            let cancellations = cancellations.clone();
             let app = app_handle.clone();
             Box::pin(async move {
                 tracing::info!(?fid, "scheduled tick for folder");
@@ -92,6 +108,7 @@ impl SchedulerService {
                         let _ = crate::ipc::files::organize_inner(
                             &app,
                             &db,
+                            &cancellations,
                             &folder.path,
                             folder.subfolders.enabled,
                         )
@@ -120,8 +137,17 @@ impl SchedulerService {
         Ok(())
     }
 
-    pub fn next_run(&self, _folder_id: Uuid) -> Option<chrono::DateTime<chrono::Utc>> {
-        None
+    pub fn next_run(&self, folder_id: Uuid) -> Option<chrono::DateTime<chrono::Utc>> {
+        if !self.jobs.lock().contains_key(&folder_id) {
+            return None;
+        }
+        let folder = self.db.folders().get(folder_id).ok()??;
+        let schedule = folder.schedule?;
+        let next_local = schedule.next_local_run_after(chrono::Local::now().naive_local())?;
+        chrono::Local
+            .from_local_datetime(&next_local)
+            .earliest()
+            .map(|run| run.with_timezone(&chrono::Utc))
     }
 
     pub async fn shutdown(&self) {
