@@ -70,6 +70,7 @@
     "deleteFailed": "The file could not be deleted.",
     "deleteInProgress": "Permanent deletion started but its final result has not been recorded yet.",
     "deleteInterruptedReview": "The app closed during a permanent deletion. Check the original path to verify the result before continuing.",
+    "duplicateChanged": "One of the files changed during comparison. Nothing was deleted or sent to Trash.",
     "destinationCreateFailed": "The destination folder could not be created.",
     "fileUnavailable": "The source file is unavailable or no longer valid.",
     "folderNotFound": "Folder not found",
@@ -408,8 +409,14 @@
     "conflictBehavior": "Conflict behavior",
     "conflictBehaviorDesc": "What to do when a file with the same name already exists at the destination",
     "dark": "Dark",
+    "deleteDuplicateConfirm": "This permanently deletes the source file when its content is identical to the file already organized. It cannot be undone. Enable it anyway?",
+    "deleteDuplicateWarning": "Advanced option: identical duplicates will be permanently deleted and cannot be undone.",
+    "deleteDuplicates": "Delete permanently",
+    "duplicateBehavior": "When content is identical",
+    "duplicateBehaviorDesc": "What to do when the destination has the same name and both complete contents are identical",
     "language": "Language",
     "languageDesc": "Select your preferred language",
+    "keepBothDuplicates": "Keep both (safest)",
     "launchAtStartup": "Launch at startup",
     "launchAtStartupDesc": "Start FileGrove automatically when you log in",
     "light": "Light",
@@ -429,7 +436,8 @@
     "subtitle": "Customize your file organization experience",
     "system": "System",
     "theme": "Theme",
-    "title": "Settings"
+    "title": "Settings",
+    "trashDuplicates": "Send duplicate to Trash"
   },
   "sidebar": {
     "about": "About",

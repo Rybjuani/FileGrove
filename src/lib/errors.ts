@@ -16,6 +16,7 @@ const ERROR_KEYS: Record<string, string> = {
   DELETE_FAILED: 'errors.deleteFailed',
   DELETE_IN_PROGRESS: 'errors.deleteInProgress',
   DELETE_INTERRUPTED_REVIEW_REQUIRED: 'errors.deleteInterruptedReview',
+  DUPLICATE_CHANGED: 'errors.duplicateChanged',
   DESTINATION_CREATE_FAILED: 'errors.destinationCreateFailed',
   DESTINATION_RESTORE_FAILED: 'errors.undoBackupRestoreFailed',
   FIRST_RUN_CONFIRMATION_REQUIRED: 'errors.recursiveConfirmationRequired',

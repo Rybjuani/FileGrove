@@ -66,6 +66,8 @@ fn validate_settings(settings: &serde_json::Map<String, Value>) -> Result<(), &'
             "language" if matches!(value.as_str(), Some("en" | "es")) => {}
             "conflictBehavior"
                 if matches!(value.as_str(), Some("rename" | "overwrite" | "skip")) => {}
+            "duplicateBehavior"
+                if matches!(value.as_str(), Some("keepBoth" | "trash" | "delete")) => {}
             "rulesSortOrder" | "foldersSortOrder"
                 if matches!(value.as_str(), Some("created" | "name")) => {}
             "subfolderDefaults.maxDepth"

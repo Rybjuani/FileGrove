@@ -136,6 +136,34 @@ export function Settings() {
             <p className="mt-2 text-xs text-yellow-400">{t('settings.overwriteWarning')}</p>
           )}
         </Field>
+        <Field label={t('settings.duplicateBehavior')} desc={t('settings.duplicateBehaviorDesc')}>
+          <select
+            className="input"
+            value={s?.duplicateBehavior ?? 'keepBoth'}
+            disabled={saving === 'duplicateBehavior'}
+            onChange={(event) => {
+              const duplicateBehavior = event.target.value as NonNullable<
+                SettingsT['duplicateBehavior']
+              >;
+              if (
+                duplicateBehavior === 'delete' &&
+                s?.duplicateBehavior !== 'delete' &&
+                !window.confirm(t('settings.deleteDuplicateConfirm'))
+              ) {
+                event.currentTarget.value = s?.duplicateBehavior ?? 'keepBoth';
+                return;
+              }
+              void save('duplicateBehavior', { duplicateBehavior });
+            }}
+          >
+            <option value="keepBoth">{t('settings.keepBothDuplicates')}</option>
+            <option value="trash">{t('settings.trashDuplicates')}</option>
+            <option value="delete">{t('settings.deleteDuplicates')}</option>
+          </select>
+          {s?.duplicateBehavior === 'delete' && (
+            <p className="mt-2 text-xs text-red-300">{t('settings.deleteDuplicateWarning')}</p>
+          )}
+        </Field>
       </section>
 
       <section className="card space-y-4">

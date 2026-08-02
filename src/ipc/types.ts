@@ -144,6 +144,7 @@ export type Settings = Record<string, unknown> & {
   notifications?: boolean;
   automationPaused?: boolean;
   conflictBehavior?: 'overwrite' | 'rename' | 'skip';
+  duplicateBehavior?: 'keepBoth' | 'trash' | 'delete';
   onboardingCompleted?: boolean;
   rulesSortOrder?: 'created' | 'name';
   foldersSortOrder?: 'created' | 'name';

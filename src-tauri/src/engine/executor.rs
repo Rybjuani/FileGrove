@@ -11,7 +11,8 @@ use crate::engine::cancellation::CancellationToken;
 use crate::engine::command::{execute_shell_command_cancellable, CommandExecution};
 pub use crate::engine::file_ops::ConflictBehavior;
 use crate::engine::file_ops::{
-    execute_prepared_move_cancellable, prepare_move, trash_file, MoveOutcome, PrepareMoveOutcome,
+    execute_prepared_move_cancellable, files_identical_cancellable, prepare_move, trash_file,
+    DuplicateBehavior, MoveOutcome, PrepareMoveOutcome, PreparedMove,
 };
 use crate::engine::keyed_lock::KeyedAsyncLock;
 use crate::engine::matcher::FileItem;
@@ -35,6 +36,14 @@ pub struct ActionResult {
     pub new_path: Option<PathBuf>,
     pub error: Option<String>,
     pub command_execution: Option<CommandExecution>,
+    activity_type_override: Option<ActivityType>,
+    activity_already_recorded: bool,
+}
+
+enum MovePreparation {
+    Ready(PreparedMove),
+    Skipped,
+    Duplicate(DuplicateBehavior),
 }
 
 pub struct Organizer<'a> {
@@ -42,6 +51,7 @@ pub struct Organizer<'a> {
     pub session_id: Uuid,
     pub scan_root: PathBuf,
     pub conflict_behavior: ConflictBehavior,
+    pub duplicate_behavior: DuplicateBehavior,
     pub preserve_relative_structure: bool,
     pub cancellation: Option<CancellationToken>,
 }
@@ -93,7 +103,10 @@ impl<'a> Organizer<'a> {
         };
 
         let mut result = match action {
-            Action::Move { destination } => self.execute_move(&current_file, destination).await,
+            Action::Move { destination } => {
+                self.execute_move(&current_file, destination, rule_id, rule_name)
+                    .await
+            }
             Action::Trash => self.execute_trash(&current_file).await,
             Action::Delete => self.execute_delete(&current_file).await,
             Action::RunCommand {
@@ -123,7 +136,7 @@ impl<'a> Organizer<'a> {
                 result.success = false;
                 result.error = Some(format!("ACTIVITY_FINALIZE_FAILED: {error}"));
             }
-        } else {
+        } else if !result.activity_already_recorded {
             let recorded = self.record_activity(&current_file, action, rule_id, rule_name, &result);
             if recorded && result.error.as_deref() == Some("COMMAND_INTERRUPTED_REVIEW_REQUIRED") {
                 if let (Some(rule_id), Action::RunCommand { command, .. }) = (rule_id, action) {
@@ -181,7 +194,13 @@ impl<'a> Organizer<'a> {
         Ok(current)
     }
 
-    async fn execute_move(&self, file: &FileItem, destination: &str) -> ActionResult {
+    async fn execute_move(
+        &self,
+        file: &FileItem,
+        destination: &str,
+        rule_id: Option<Uuid>,
+        rule_name: Option<&str>,
+    ) -> ActionResult {
         let source = match validate_source_file(&self.scan_root, Path::new(&file.path)) {
             Ok(path) => path,
             Err(error) => return action_error(error.to_string()),
@@ -249,22 +268,48 @@ impl<'a> Organizer<'a> {
         let _destination_guard = destination_lock.lock().await;
 
         let conflict_behavior = self.conflict_behavior;
+        let duplicate_behavior = self.duplicate_behavior;
         let expected = file.clone();
-        let prepared = match tokio::task::spawn_blocking(move || {
-            revalidate_immediately_before_action(&expected, &source)?;
-            prepare_move(&source, &requested_path, conflict_behavior)
+        let source_for_prepare = source.clone();
+        let destination_for_prepare = requested_path.clone();
+        let cancellation_for_compare = self.cancellation.clone();
+        let prepared = match tokio::task::spawn_blocking(move || -> anyhow::Result<_> {
+            revalidate_immediately_before_action(&expected, &source_for_prepare)?;
+            let duplicate = destination_for_prepare.try_exists()?
+                && files_identical_cancellable(
+                    &source_for_prepare,
+                    &destination_for_prepare,
+                    cancellation_for_compare.as_ref(),
+                )?;
+            if duplicate && duplicate_behavior != DuplicateBehavior::KeepBoth {
+                return Ok(MovePreparation::Duplicate(duplicate_behavior));
+            }
+            let behavior = if duplicate && conflict_behavior == ConflictBehavior::Overwrite {
+                ConflictBehavior::Rename
+            } else {
+                conflict_behavior
+            };
+            match prepare_move(&source_for_prepare, &destination_for_prepare, behavior)? {
+                PrepareMoveOutcome::Ready(prepared) => Ok(MovePreparation::Ready(prepared)),
+                PrepareMoveOutcome::Skipped => Ok(MovePreparation::Skipped),
+            }
         })
         .await
         {
-            Ok(Ok(PrepareMoveOutcome::Ready(prepared))) => prepared,
-            Ok(Ok(PrepareMoveOutcome::Skipped)) => {
-                return ActionResult {
-                    success: true,
-                    skipped: true,
-                    new_path: None,
-                    error: None,
-                    command_execution: None,
-                };
+            Ok(Ok(MovePreparation::Ready(prepared))) => prepared,
+            Ok(Ok(MovePreparation::Skipped)) => return action_skipped(),
+            Ok(Ok(MovePreparation::Duplicate(DuplicateBehavior::Trash))) => {
+                return self
+                    .execute_duplicate_trash(file, source, requested_path)
+                    .await;
+            }
+            Ok(Ok(MovePreparation::Duplicate(DuplicateBehavior::Delete))) => {
+                return self
+                    .execute_duplicate_delete(file, source, requested_path, rule_id, rule_name)
+                    .await;
+            }
+            Ok(Ok(MovePreparation::Duplicate(DuplicateBehavior::KeepBoth))) => {
+                return action_error("DUPLICATE_POLICY_INVALID".to_string());
             }
             Ok(Err(error)) => return action_error(error.to_string()),
             Err(error) => return action_error(format!("MOVE_PREPARE_TASK_FAILED: {error}")),
@@ -308,19 +353,15 @@ impl<'a> Organizer<'a> {
                     new_path: Some(destination),
                     error: None,
                     command_execution: None,
+                    activity_type_override: None,
+                    activity_already_recorded: false,
                 }
             }
             Ok(Ok(MoveOutcome::Skipped)) => {
                 if let Err(error) = self.db.undo().delete_entry(&journal) {
                     tracing::warn!("could not discard skipped move journal: {error}");
                 }
-                ActionResult {
-                    success: true,
-                    skipped: true,
-                    new_path: None,
-                    error: None,
-                    command_execution: None,
-                }
+                action_skipped()
             }
             Ok(Err(error)) => {
                 let requires_recovery = error.to_string().contains("DESTINATION_RESTORE_FAILED");
@@ -343,6 +384,123 @@ impl<'a> Organizer<'a> {
         }
     }
 
+    async fn execute_duplicate_trash(
+        &self,
+        file: &FileItem,
+        source: PathBuf,
+        destination: PathBuf,
+    ) -> ActionResult {
+        let expected = file.clone();
+        let cancellation = self.cancellation.clone();
+        match tokio::task::spawn_blocking(move || {
+            if cancellation
+                .as_ref()
+                .is_some_and(CancellationToken::is_cancelled)
+            {
+                anyhow::bail!("MOVE_CANCELLED");
+            }
+            revalidate_immediately_before_action(&expected, &source)?;
+            if !files_identical_cancellable(&source, &destination, cancellation.as_ref())? {
+                anyhow::bail!("DUPLICATE_CHANGED");
+            }
+            trash_file(&source)
+        })
+        .await
+        {
+            Ok(Ok(())) => ActionResult {
+                success: true,
+                skipped: false,
+                new_path: None,
+                error: None,
+                command_execution: None,
+                activity_type_override: Some(ActivityType::Trash),
+                activity_already_recorded: false,
+            },
+            Ok(Err(error)) => action_error(error.to_string()),
+            Err(error) => action_error(format!("TRASH_TASK_FAILED: {error}")),
+        }
+    }
+
+    async fn execute_duplicate_delete(
+        &self,
+        file: &FileItem,
+        source: PathBuf,
+        destination: PathBuf,
+        rule_id: Option<Uuid>,
+        rule_name: Option<&str>,
+    ) -> ActionResult {
+        let activity_id = Uuid::new_v4();
+        let delete_action = Action::Delete;
+        let pending = self.activity_entry(
+            activity_id,
+            file,
+            &delete_action,
+            rule_id,
+            rule_name,
+            &action_error("DELETE_IN_PROGRESS".to_string()),
+        );
+        if let Err(error) = self.db.activity().insert(&pending) {
+            return action_error(format!("ACTIVITY_JOURNAL_FAILED: {error}"));
+        }
+
+        let expected = file.clone();
+        let cancellation = self.cancellation.clone();
+        let mut result = match tokio::task::spawn_blocking(move || {
+            if cancellation
+                .as_ref()
+                .is_some_and(CancellationToken::is_cancelled)
+            {
+                anyhow::bail!("MOVE_CANCELLED");
+            }
+            revalidate_immediately_before_action(&expected, &source)?;
+            if !files_identical_cancellable(&source, &destination, cancellation.as_ref())? {
+                anyhow::bail!("DUPLICATE_CHANGED");
+            }
+            std::fs::remove_file(source).map_err(anyhow::Error::from)
+        })
+        .await
+        {
+            Ok(Ok(())) => ActionResult {
+                success: true,
+                skipped: false,
+                new_path: None,
+                error: None,
+                command_execution: None,
+                activity_type_override: Some(ActivityType::Delete),
+                activity_already_recorded: true,
+            },
+            Ok(Err(error))
+                if error.to_string().starts_with("SOURCE_FILE_CHANGED")
+                    || error.to_string().starts_with("DUPLICATE_CHANGED")
+                    || error.to_string().starts_with("MOVE_CANCELLED") =>
+            {
+                action_error(error.to_string())
+            }
+            Ok(Err(error)) => action_error(format!("DELETE_FAILED: {error}")),
+            Err(error) => action_error(format!("DELETE_TASK_FAILED: {error}")),
+        };
+        result.activity_type_override = Some(ActivityType::Delete);
+        result.activity_already_recorded = true;
+
+        let completed = self.activity_entry(
+            activity_id,
+            file,
+            &delete_action,
+            rule_id,
+            rule_name,
+            &result,
+        );
+        if let Err(error) = self.db.activity().update(&completed) {
+            tracing::error!(
+                ?activity_id,
+                "failed to finalize duplicate deletion: {error}"
+            );
+            result.success = false;
+            result.error = Some(format!("ACTIVITY_FINALIZE_FAILED: {error}"));
+        }
+        result
+    }
+
     async fn execute_trash(&self, file: &FileItem) -> ActionResult {
         let path = match validate_source_file(&self.scan_root, Path::new(&file.path)) {
             Ok(path) => path,
@@ -361,6 +519,8 @@ impl<'a> Organizer<'a> {
                 new_path: None,
                 error: None,
                 command_execution: None,
+                activity_type_override: None,
+                activity_already_recorded: false,
             },
             Ok(Err(error)) => action_error(error.to_string()),
             Err(error) => action_error(format!("TRASH_TASK_FAILED: {error}")),
@@ -405,6 +565,8 @@ impl<'a> Organizer<'a> {
                 new_path: None,
                 error: None,
                 command_execution: None,
+                activity_type_override: None,
+                activity_already_recorded: false,
             },
             Ok(Err(error)) if error.to_string().starts_with("SOURCE_FILE_CHANGED") => {
                 action_error(error.to_string())
@@ -464,6 +626,8 @@ impl<'a> Organizer<'a> {
                     new_path: None,
                     error: None,
                     command_execution: None,
+                    activity_type_override: None,
+                    activity_already_recorded: false,
                 };
             }
             CommandClaim::InterruptedNeedsReview => {
@@ -502,6 +666,8 @@ impl<'a> Organizer<'a> {
             new_path: None,
             error: execution.error.clone(),
             command_execution: Some(execution),
+            activity_type_override: None,
+            activity_already_recorded: false,
         };
         if let Some(error) = ledger_error {
             result.success = false;
@@ -545,12 +711,12 @@ impl<'a> Organizer<'a> {
         ActivityEntry {
             id,
             at: Utc::now(),
-            r#type: match action {
+            r#type: result.activity_type_override.unwrap_or(match action {
                 Action::Move { .. } => ActivityType::Move,
                 Action::Trash => ActivityType::Trash,
                 Action::Delete => ActivityType::Delete,
                 Action::RunCommand { .. } => ActivityType::RunCommand,
-            },
+            }),
             file_name: file.name.clone(),
             file_path: file.path.clone(),
             folder_id: self
@@ -588,6 +754,20 @@ fn action_error(error: String) -> ActionResult {
         new_path: None,
         error: Some(error),
         command_execution: None,
+        activity_type_override: None,
+        activity_already_recorded: false,
+    }
+}
+
+fn action_skipped() -> ActionResult {
+    ActionResult {
+        success: true,
+        skipped: true,
+        new_path: None,
+        error: None,
+        command_execution: None,
+        activity_type_override: None,
+        activity_already_recorded: false,
     }
 }
 
@@ -607,13 +787,15 @@ mod tests {
     use std::fs;
 
     #[tokio::test]
-    async fn relative_move_creates_a_managed_folder_and_records_undo() {
+    async fn identical_conflict_keeps_both_by_default_and_records_undo() {
         let temporary = tempfile::tempdir().unwrap();
         let watched = temporary.path().join("watched");
         let destination = watched.join("Documents");
         fs::create_dir(&watched).unwrap();
         let source = watched.join("report.txt");
         fs::write(&source, b"report").unwrap();
+        fs::create_dir(&destination).unwrap();
+        fs::write(destination.join("report.txt"), b"report").unwrap();
 
         let database_path = temporary.path().join("app.db");
         let database = Database::open(&database_path).unwrap();
@@ -661,6 +843,7 @@ mod tests {
             session_id,
             scan_root: watched,
             conflict_behavior: ConflictBehavior::Rename,
+            duplicate_behavior: DuplicateBehavior::KeepBoth,
             preserve_relative_structure: false,
             cancellation: None,
         };
@@ -672,12 +855,13 @@ mod tests {
         assert!(result.success, "{:?}", result.error);
         assert!(!source.exists());
         assert!(destination.join("report.txt").exists());
+        assert!(destination.join("report (1).txt").exists());
         let undo_entries = database.undo().read_reverse(session_id).unwrap();
         assert_eq!(undo_entries.len(), 1);
         assert_eq!(undo_entries[0].from_path, file.path);
         assert_eq!(
             undo_entries[0].to_path,
-            destination.join("report.txt").to_string_lossy()
+            destination.join("report (1).txt").to_string_lossy()
         );
 
         let (activity, total) = database
@@ -686,6 +870,86 @@ mod tests {
             .unwrap();
         assert_eq!(total, 1);
         assert_eq!(activity[0].r#type, ActivityType::Move);
+        assert!(activity[0].success);
+    }
+
+    #[tokio::test]
+    async fn identical_duplicate_deletion_is_audited_before_removal() {
+        let temporary = tempfile::tempdir().unwrap();
+        let watched = temporary.path().join("watched");
+        let destination = watched.join("Documents");
+        fs::create_dir_all(&destination).unwrap();
+        let source = watched.join("report.txt");
+        fs::write(&source, b"identical").unwrap();
+        fs::write(destination.join("report.txt"), b"identical").unwrap();
+
+        let database = Database::open(&temporary.path().join("app.db")).unwrap();
+        database.run_migrations().unwrap();
+        let session_id = Uuid::new_v4();
+        let file = FileItem::from_path_sync(source.to_string_lossy().as_ref()).unwrap();
+        let action = Action::Move {
+            destination: "Documents".into(),
+        };
+        let rule_id = Uuid::new_v4();
+        database
+            .rules()
+            .insert(&crate::domain::Rule {
+                id: rule_id,
+                name: "Documents".into(),
+                is_quick_rule: false,
+                enabled: true,
+                order: 0,
+                icon: "File".into(),
+                conditions: vec![crate::domain::Condition::Extension {
+                    value: vec![".txt".into()],
+                }],
+                action: action.clone(),
+                created_at: Utc::now(),
+            })
+            .unwrap();
+        database
+            .folders()
+            .insert(&crate::domain::Folder {
+                id: Uuid::new_v4(),
+                path: watched.to_string_lossy().into_owned(),
+                name: "Watched".into(),
+                mode: crate::domain::FolderMode::Single,
+                rule_ids: vec![rule_id],
+                watcher_status: crate::domain::WatcherStatus::Stopped,
+                created_at: Utc::now(),
+                subfolders: crate::domain::SubfolderConfig::default(),
+                schedule: None,
+                exclude_folders: Vec::new(),
+                exclude_patterns: Vec::new(),
+            })
+            .unwrap();
+        let organizer = Organizer {
+            db: &database,
+            session_id,
+            scan_root: watched,
+            conflict_behavior: ConflictBehavior::Rename,
+            duplicate_behavior: DuplicateBehavior::Delete,
+            preserve_relative_structure: false,
+            cancellation: None,
+        };
+
+        let result = organizer
+            .execute(&file, &action, Some(rule_id), Some("Documents"))
+            .await;
+
+        assert!(result.success, "{:?}", result.error);
+        assert!(!source.exists());
+        assert_eq!(
+            fs::read(destination.join("report.txt")).unwrap(),
+            b"identical"
+        );
+        assert!(database.undo().read_reverse(session_id).unwrap().is_empty());
+        let (activity, total) = database
+            .activity()
+            .list(&ActivityFilters::default(), 10, 0)
+            .unwrap();
+        assert_eq!(total, 1);
+        assert_eq!(activity[0].r#type, ActivityType::Delete);
         assert!(activity[0].success);
     }
 }

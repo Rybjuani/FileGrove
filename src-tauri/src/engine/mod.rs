@@ -4,7 +4,6 @@
 
 pub mod cancellation;
 pub mod command;
-#[cfg(not(test))]
 pub mod executor;
 pub mod file_ops;
 pub mod keyed_lock;

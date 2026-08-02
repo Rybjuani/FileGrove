@@ -524,6 +524,9 @@ async fn execute_plan(
     let conflict_behavior = crate::engine::executor::ConflictBehavior::from_str(
         &db.settings().get_conflict_behavior_str(),
     );
+    let duplicate_behavior = crate::engine::file_ops::DuplicateBehavior::from_str(
+        &db.settings().get_duplicate_behavior_str(),
+    );
     let scan_root = PathBuf::from(folder_path);
     let mut done = 0u32;
     let mut failed = 0u32;
@@ -543,6 +546,7 @@ async fn execute_plan(
                 session_id,
                 scan_root: scan_root.clone(),
                 conflict_behavior,
+                duplicate_behavior,
                 preserve_relative_structure,
                 cancellation: Some(cancellation.clone()),
             };

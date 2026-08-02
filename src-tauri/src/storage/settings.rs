@@ -160,4 +160,12 @@ impl SettingsRepo {
             .and_then(|v| v.as_str().map(String::from))
             .unwrap_or_else(|| "rename".to_string())
     }
+
+    pub fn get_duplicate_behavior_str(&self) -> String {
+        self.get("duplicateBehavior")
+            .ok()
+            .flatten()
+            .and_then(|value| value.as_str().map(String::from))
+            .unwrap_or_else(|| "keepBoth".to_string())
+    }
 }

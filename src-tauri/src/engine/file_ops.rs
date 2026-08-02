@@ -16,6 +16,23 @@ pub enum ConflictBehavior {
     Skip,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DuplicateBehavior {
+    KeepBoth,
+    Trash,
+    Delete,
+}
+
+impl DuplicateBehavior {
+    pub fn from_str(value: &str) -> Self {
+        match value {
+            "trash" => Self::Trash,
+            "delete" => Self::Delete,
+            _ => Self::KeepBoth,
+        }
+    }
+}
+
 impl ConflictBehavior {
     pub fn from_str(value: &str) -> Self {
         match value {
@@ -184,6 +201,43 @@ pub fn move_file(
 pub fn trash_file(path: &Path) -> Result<()> {
     ensure_regular_file(path, "SOURCE_FILE_INVALID")?;
     trash::delete(path).map_err(|error| anyhow!("TRASH_FAILED: {error}"))
+}
+
+/// Compare two regular files byte-for-byte. Equal size alone is never enough
+/// to classify a file as a duplicate.
+#[cfg(test)]
+pub fn files_identical(left: &Path, right: &Path) -> Result<bool> {
+    files_identical_cancellable(left, right, None)
+}
+
+pub fn files_identical_cancellable(
+    left: &Path,
+    right: &Path,
+    cancellation: Option<&CancellationToken>,
+) -> Result<bool> {
+    ensure_regular_file(left, "SOURCE_FILE_INVALID")?;
+    ensure_regular_file(right, "DESTINATION_UNSAFE")?;
+    if fs::metadata(left)?.len() != fs::metadata(right)?.len() {
+        return Ok(false);
+    }
+
+    let mut left = File::open(left)?;
+    let mut right = File::open(right)?;
+    let mut left_buffer = [0u8; 64 * 1024];
+    let mut right_buffer = [0u8; 64 * 1024];
+    loop {
+        if is_cancelled(cancellation) {
+            return Err(anyhow!("MOVE_CANCELLED"));
+        }
+        let left_read = left.read(&mut left_buffer)?;
+        let right_read = right.read(&mut right_buffer)?;
+        if left_read != right_read || left_buffer[..left_read] != right_buffer[..right_read] {
+            return Ok(false);
+        }
+        if left_read == 0 {
+            return Ok(true);
+        }
+    }
 }
 
 /// Restore an overwrite backup without ever replacing an unrelated path.
@@ -430,5 +484,21 @@ mod tests {
         assert_eq!(prepared.destination(), temp.path().join("report (1).txt"));
         assert!(!prepared.had_destination());
         assert!(prepared.overwrite_backup().is_none());
+    }
+
+    #[test]
+    fn duplicate_detection_compares_complete_content() {
+        let temporary = tempfile::tempdir().unwrap();
+        let left = temporary.path().join("left.bin");
+        let right = temporary.path().join("right.bin");
+        fs::write(&left, b"same bytes").unwrap();
+        fs::write(&right, b"same bytes").unwrap();
+        assert!(files_identical(&left, &right).unwrap());
+
+        fs::write(&right, b"other data").unwrap();
+        assert!(!files_identical(&left, &right).unwrap());
+
+        fs::write(&right, b"short").unwrap();
+        assert!(!files_identical(&left, &right).unwrap());
     }
 }

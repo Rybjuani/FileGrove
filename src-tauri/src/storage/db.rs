@@ -137,5 +137,13 @@ mod tests {
             })
             .unwrap();
         assert_eq!(theme, "\"dark\"");
+        let duplicate_behavior: String = connection
+            .query_row(
+                "SELECT value FROM settings WHERE key='duplicateBehavior'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(duplicate_behavior, "\"keepBoth\"");
     }
 }

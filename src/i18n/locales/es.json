@@ -70,6 +70,7 @@
     "deleteFailed": "No se pudo eliminar el archivo.",
     "deleteInProgress": "La eliminación permanente comenzó, pero su resultado final aún no quedó registrado.",
     "deleteInterruptedReview": "La app se cerró durante una eliminación permanente. Revisa la ruta original para verificar el resultado antes de continuar.",
+    "duplicateChanged": "Uno de los archivos cambió durante la comparación. No se eliminó ni envió nada a la Papelera.",
     "destinationCreateFailed": "No se pudo crear la carpeta de destino.",
     "fileUnavailable": "El archivo de origen no está disponible o dejó de ser válido.",
     "folderNotFound": "Carpeta no encontrada",
@@ -408,8 +409,14 @@
     "conflictBehavior": "Comportamiento en conflictos de archivos",
     "conflictBehaviorDesc": "Qué hacer cuando ya existe un archivo con el mismo nombre en el destino",
     "dark": "Oscuro",
+    "deleteDuplicateConfirm": "Esta opción elimina permanentemente el archivo de origen cuando su contenido es idéntico al archivo que ya está organizado. No se puede deshacer. ¿Activarla de todos modos?",
+    "deleteDuplicateWarning": "Opción avanzada: los duplicados idénticos se eliminarán permanentemente y no podrán deshacerse.",
+    "deleteDuplicates": "Eliminar permanentemente",
+    "duplicateBehavior": "Cuando el contenido es idéntico",
+    "duplicateBehaviorDesc": "Qué hacer si en el destino ya existe el mismo nombre y ambos contenidos son idénticos",
     "language": "Idioma",
     "languageDesc": "Selecciona tu idioma preferido",
+    "keepBothDuplicates": "Conservar ambos (más seguro)",
     "launchAtStartup": "Iniciar con el sistema",
     "launchAtStartupDesc": "Iniciar FileGrove automáticamente al iniciar sesión",
     "light": "Claro",
@@ -429,7 +436,8 @@
     "subtitle": "Personaliza tu experiencia de organización de archivos",
     "system": "Sistema",
     "theme": "Tema",
-    "title": "Ajustes"
+    "title": "Ajustes",
+    "trashDuplicates": "Enviar el duplicado a la Papelera"
   },
   "sidebar": {
     "about": "Acerca de",
