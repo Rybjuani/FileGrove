@@ -2,6 +2,7 @@ use serde_json::{json, Value};
 use tauri::{AppHandle, State};
 use uuid::Uuid;
 
+use crate::domain::FolderMode;
 use crate::AppState;
 
 #[tauri::command]
@@ -14,6 +15,15 @@ pub async fn start(
         Ok(Some(f)) => f,
         _ => return Ok(json!({ "success": false, "error": "FOLDER_NOT_FOUND" })),
     };
+    if folder.mode != FolderMode::Auto {
+        return Ok(json!({ "success": false, "error": "WATCHER_REQUIRES_AUTO_MODE" }));
+    }
+    if folder.subfolders.enabled {
+        return Ok(json!({
+            "success": false,
+            "error": "AUTO_MODE_CONFLICTS_WITH_SUBFOLDERS"
+        }));
+    }
     match state.watcher.start_watching_and_catch_up(&app, &folder) {
         Ok(()) => Ok(json!({ "success": true })),
         Err(e) => Ok(json!({ "success": false, "error": e.to_string() })),

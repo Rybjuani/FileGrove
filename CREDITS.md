@@ -17,14 +17,6 @@ Without that foundation, FileGrove would not exist.
 
 - FileGrove Contributors (initial implementation, 2026)
 
-## Sponsors
-
-FileGrove is sustained by community support. If you find the project
-useful, please consider sponsoring via:
-
-- GitHub Sponsors: https://github.com/sponsors/filegrove
-- OpenCollective: https://opencollective.com/filegrove
-
 ## Acknowledgements
 
 Thanks to the maintainers and contributors of all the open-source

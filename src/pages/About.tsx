@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Trees, Github, Globe, Heart } from 'lucide-react';
+import { Trees, HardDrive, Heart } from 'lucide-react';
 import { ipc } from '../ipc';
 
 export function About() {
@@ -40,22 +40,10 @@ export function About() {
         <h3 className="text-sm font-semibold uppercase text-primary-300">
           {t('about.acknowledgements')}
         </h3>
-        <a
-          href="https://github.com/filegrove/filegrove"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 text-sm text-accent-400 hover:text-accent-300"
-        >
-          <Github size={16} /> GitHub
-        </a>
-        <a
-          href="https://filegrove.org"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 text-sm text-accent-400 hover:text-accent-300"
-        >
-          <Globe size={16} /> {t('about.website')}
-        </a>
+        <p className="flex items-center gap-2 text-sm text-primary-300">
+          <HardDrive size={16} className="text-accent-400" /> {t('about.localBuild')}
+        </p>
+        <p className="text-xs text-primary-500">{t('about.localBuildDesc')}</p>
         <p className="flex items-center gap-2 text-xs text-primary-500">
           <Heart size={14} /> {t('about.openSource')}
         </p>

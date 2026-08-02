@@ -15,22 +15,9 @@
     "core:menu:default",
     "core:event:default",
     "core:path:default",
-    "shell:allow-open",
     "dialog:allow-open",
     "dialog:allow-save",
-    "fs:allow-read-file",
-    "fs:allow-write-file",
-    "fs:allow-read-dir",
-    "fs:allow-exists",
-    "fs:allow-mkdir",
-    "fs:allow-remove",
-    "fs:allow-rename",
-    "fs:allow-copy-file",
-    "os:default",
-    "process:allow-exit",
-    "process:allow-restart",
     "notification:default",
-    "autostart:default",
-    "log:default"
+    "autostart:default"
   ]
 }

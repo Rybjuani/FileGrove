@@ -3,12 +3,45 @@ use serde::{Deserialize, Serialize};
 /// Cron-style schedule for a folder in `Scheduled` mode.
 ///
 /// Days of week: 0 = Sunday, 6 = Saturday. Time is 24-hour `HH:MM`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Schedule {
     pub enabled: bool,
     pub days_of_week: Vec<u8>,
     pub time: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ScheduleRegistration {
+    generation: u64,
+    schedule: Schedule,
+    active: bool,
+}
+
+impl ScheduleRegistration {
+    pub(crate) fn new(generation: u64, schedule: Schedule) -> Self {
+        Self {
+            generation,
+            schedule,
+            active: true,
+        }
+    }
+
+    pub(crate) fn deactivate(&mut self) {
+        self.active = false;
+    }
+
+    pub(crate) fn is_active(&self) -> bool {
+        self.active
+    }
+
+    pub(crate) fn is_current(&self, generation: u64, schedule: &Schedule) -> bool {
+        self.active && self.generation == generation && self.schedule == *schedule
+    }
+
+    pub(crate) fn schedule(&self) -> &Schedule {
+        &self.schedule
+    }
 }
 
 impl Default for Schedule {
@@ -26,16 +59,11 @@ impl Schedule {
     ///
     /// Returns `None` if the schedule is invalid.
     pub fn to_cron(&self) -> Option<String> {
-        if self.days_of_week.is_empty() {
+        if self.days_of_week.is_empty() || self.days_of_week.iter().any(|day| *day > 6) {
             return None;
         }
         let (h, m) = self.parsed_time()?;
-        let mut days: Vec<u8> = self
-            .days_of_week
-            .iter()
-            .copied()
-            .filter(|d| *d <= 6)
-            .collect();
+        let mut days = self.days_of_week.to_vec();
         days.sort_unstable();
         days.dedup();
         if days.is_empty() {
@@ -123,6 +151,16 @@ mod tests {
     }
 
     #[test]
+    fn rejects_any_invalid_day_instead_of_silently_dropping_it() {
+        let schedule = Schedule {
+            enabled: true,
+            days_of_week: vec![1, 7],
+            time: "09:00".to_string(),
+        };
+        assert_eq!(schedule.to_cron(), None);
+    }
+
+    #[test]
     fn calculates_next_local_occurrence() {
         let schedule = Schedule {
             enabled: true,
@@ -145,5 +183,25 @@ mod tests {
                 .unwrap()
                 .and_hms_opt(9, 30, 0)
         );
+    }
+
+    #[test]
+    fn stale_schedule_registration_never_becomes_current() {
+        let original = Schedule {
+            enabled: true,
+            days_of_week: vec![1],
+            time: "09:00".into(),
+        };
+        let changed = Schedule {
+            time: "10:00".into(),
+            ..original.clone()
+        };
+        let mut registration = ScheduleRegistration::new(7, original.clone());
+
+        assert!(registration.is_current(7, &original));
+        assert!(!registration.is_current(6, &original));
+        assert!(!registration.is_current(7, &changed));
+        registration.deactivate();
+        assert!(!registration.is_current(7, &original));
     }
 }

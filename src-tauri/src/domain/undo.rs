@@ -21,3 +21,14 @@ pub struct UndoSessionStats {
     pub completed: usize,
     pub failed: usize,
 }
+
+/// Persisted summary used to recover undo affordances after navigation or an
+/// application restart.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UndoSessionSummary {
+    pub session_id: Uuid,
+    pub at: chrono::DateTime<chrono::Utc>,
+    pub entry_count: usize,
+    pub from_path: String,
+}

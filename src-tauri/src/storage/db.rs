@@ -9,6 +9,7 @@ use rusqlite::Connection;
 use tauri::{AppHandle, Manager};
 
 use super::activity::ActivityRepo;
+use super::command_ledger::CommandLedgerRepo;
 use super::folders::FolderRepo;
 use super::rules::RuleRepo;
 use super::settings::SettingsRepo;
@@ -40,7 +41,7 @@ impl Database {
         conn.execute_batch(
             "PRAGMA journal_mode = WAL; \
              PRAGMA foreign_keys = ON; \
-             PRAGMA synchronous = NORMAL;",
+             PRAGMA synchronous = FULL;",
         )?;
         Ok(Self {
             conn: Arc::new(Mutex::new(conn)),
@@ -77,9 +78,64 @@ impl Database {
             conn: self.conn.clone(),
         }
     }
+    pub fn command_ledger(&self) -> CommandLedgerRepo {
+        CommandLedgerRepo {
+            conn: self.conn.clone(),
+        }
+    }
     pub fn undo(&self) -> UndoRepo {
         UndoRepo {
             conn: self.conn.clone(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn migrations_are_idempotent_and_create_the_complete_local_schema() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("filegrove.db");
+        let database = Database::open(&path).unwrap();
+
+        database.run_migrations().unwrap();
+        database.run_migrations().unwrap();
+
+        let connection = database.conn.lock();
+        let journal_mode: String = connection
+            .query_row("PRAGMA journal_mode", [], |row| row.get(0))
+            .unwrap();
+        let foreign_keys: i64 = connection
+            .query_row("PRAGMA foreign_keys", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(journal_mode.to_lowercase(), "wal");
+        assert_eq!(foreign_keys, 1);
+
+        for table in [
+            "settings",
+            "folders",
+            "rules",
+            "activity",
+            "undo_entries",
+            "command_ledger",
+        ] {
+            let exists: bool = connection
+                .query_row(
+                    "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name=?1)",
+                    [table],
+                    |row| row.get(0),
+                )
+                .unwrap();
+            assert!(exists, "missing table {table}");
+        }
+
+        let theme: String = connection
+            .query_row("SELECT value FROM settings WHERE key='theme'", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(theme, "\"dark\"");
     }
 }

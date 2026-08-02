@@ -4,12 +4,13 @@ export type FolderMode = 'single' | 'auto' | 'scheduled';
 export type WatcherStatus = 'stopped' | 'running' | 'paused';
 export type DestinationMode = 'flatten' | 'preserve';
 export type ActivityType = 'move' | 'trash' | 'delete' | 'runCommand';
+export type MaxDepth = 'unlimited' | number | { level: number };
 
 export interface SubfolderConfig {
   enabled: boolean;
   destinationMode: DestinationMode;
   firstRunConfirmed: boolean;
-  maxDepth: 'unlimited' | number;
+  maxDepth: MaxDepth;
 }
 
 export interface Schedule {
@@ -80,6 +81,60 @@ export interface ActivityEntry {
   error?: string;
 }
 
+export interface ActivityFilters {
+  limit?: number;
+  offset?: number;
+  folderId?: string;
+  ruleId?: string;
+  success?: boolean;
+  type?: ActivityType;
+  since?: string;
+  until?: string;
+}
+
+export interface CommandTestResult {
+  filePath: string;
+  exitCode: number | null;
+  output: string;
+  durationMs: number;
+  timedOut: boolean;
+}
+
+export interface FileItem {
+  path: string;
+  name: string;
+  extension: string;
+  size: number;
+  modifiedAt: string;
+  createdAt: string;
+}
+
+export interface PlannedAction {
+  file: FileItem;
+  ruleId: string | null;
+  ruleName: string | null;
+  action: Action | null;
+}
+
+export interface ScanStats {
+  scanned: number;
+  errors: number;
+  truncated: boolean;
+  cancelled: boolean;
+}
+
+export interface PreviewResult {
+  plan: PlannedAction[];
+  stats: ScanStats;
+}
+
+export interface UndoSessionSummary {
+  sessionId: string;
+  at: string;
+  entryCount: number;
+  fromPath: string;
+}
+
 export type Settings = Record<string, unknown> & {
   theme?: 'dark' | 'light' | 'system';
   language?: string;
@@ -87,6 +142,7 @@ export type Settings = Record<string, unknown> & {
   minimizeToTray?: boolean;
   showTrayIcon?: boolean;
   notifications?: boolean;
+  automationPaused?: boolean;
   conflictBehavior?: 'overwrite' | 'rename' | 'skip';
   onboardingCompleted?: boolean;
   rulesSortOrder?: 'created' | 'name';

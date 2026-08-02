@@ -11,6 +11,7 @@ use crate::engine::matcher::{find_first_matching_rule, FileItem};
 
 /// The action (or lack thereof) decided for a single file.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PlannedAction {
     pub file: FileItem,
     pub rule_id: Option<Uuid>,
@@ -23,8 +24,13 @@ pub struct PlannedAction {
 /// `rules` is filtered to enabled rules and sorted by `order` before
 /// matching. Files that don't match any rule get `action = None`.
 pub fn compute_organize_plan(files: Vec<FileItem>, mut rules: Vec<Rule>) -> Vec<PlannedAction> {
-    rules.retain(|r| r.enabled);
-    rules.sort_by_key(|r| r.order);
+    rules.retain(Rule::is_actionable);
+    rules.sort_by(|left, right| {
+        left.order
+            .cmp(&right.order)
+            .then_with(|| left.created_at.cmp(&right.created_at))
+            .then_with(|| left.id.cmp(&right.id))
+    });
 
     files
         .into_iter()
@@ -69,6 +75,7 @@ mod tests {
             size: 100,
             modified_at: chrono::Utc::now(),
             created_at: chrono::Utc::now(),
+            identity: None,
         }
     }
 
@@ -121,5 +128,39 @@ mod tests {
         r.enabled = false;
         let plan = compute_organize_plan(vec![file("photo", ".jpg")], vec![r]);
         assert!(plan[0].action.is_none());
+    }
+
+    #[test]
+    fn rules_without_conditions_are_never_actionable() {
+        let mut r = rule(
+            "a",
+            1,
+            Condition::Extension {
+                value: vec![".jpg".into()],
+            },
+        );
+        r.conditions.clear();
+        let plan = compute_organize_plan(vec![file("photo", ".jpg")], vec![r]);
+        assert!(plan[0].action.is_none());
+    }
+
+    #[test]
+    fn preview_plan_uses_the_renderer_camel_case_contract() {
+        let plan = compute_organize_plan(
+            vec![file("photo", ".jpg")],
+            vec![rule(
+                "a",
+                1,
+                Condition::Extension {
+                    value: vec![".jpg".into()],
+                },
+            )],
+        );
+        let serialized = serde_json::to_value(&plan[0]).unwrap();
+
+        assert!(serialized.get("ruleId").is_some());
+        assert!(serialized.get("ruleName").is_some());
+        assert!(serialized.get("rule_id").is_none());
+        assert!(serialized["file"].get("modifiedAt").is_some());
     }
 }

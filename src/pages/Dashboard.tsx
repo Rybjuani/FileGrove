@@ -65,11 +65,19 @@ export function Dashboard({ onNavigateToRules, onNavigateToHistory: _ }: Props) 
           </button>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((folder) => (
-            <FolderCard key={folder.id} folder={folder} onNavigateToRules={onNavigateToRules} />
-          ))}
-        </div>
+        <>
+          {filtered.length === 0 ? (
+            <div className="card py-10 text-center text-sm text-primary-400">
+              {t('dashboard.noMatches', { query })}
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((folder) => (
+                <FolderCard key={folder.id} folder={folder} onNavigateToRules={onNavigateToRules} />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {rules.length > 0 && (

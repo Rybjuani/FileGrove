@@ -13,31 +13,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Domain types: `Folder`, `Rule`, `Condition`, `Action`, `Schedule`,
   `Activity`, `UndoEntry`
 - Rule engine: condition matcher, plan computation, action executor
-  (move/delete; trash and runCommand remain pending)
-- Path token resolver (date/filename/path tokens; EXIF tokens stubbed
-  for v0.2.0)
+  (safe move, Recycle Bin, guarded delete, and runCommand)
+- Full path token resolver with local file dates and EXIF capture metadata,
+  camera, lens, ISO, focal length, and dimensions
+- Command test UI, process-tree timeout/cancellation, 1 MiB output cap,
+  environment variables, and persistent anti-rerun fingerprints
+- Cross-volume moves with explicit rename/overwrite/skip behavior
+- Recursive scanner with depth, excludes, preserved relative structure,
+  progress throttling, and a 100,000-file safety cap
 - Watcher service with functional pause/resume and startup restoration
 - Local-time scheduler with startup restoration and next-run reporting
-- Cooperative organization cancellation and populated undo sessions
+- Cooperative organization and command cancellation, plus retryable undo
+  sessions that do not overwrite existing files
 - Schedule controls for enablement, weekdays, time, and next execution
 - Tray icon with Open/Pause All/Resume All/Quit menu
+- Single-instance protection and real launch-at-startup/tray settings
 - IPC handlers for: app, folders, rules, files, organize, watcher,
   settings, activity, permissions
 - React UI: Dashboard, Rules, History, Settings, About pages
 - Zustand store (`useAppStore`) for global state
 - i18n with EN + ES catalogs (ES extracted from File Arbor v1.1.2)
-- CI: Rust matrix (Ubuntu/Windows/macOS), frontend checks
-- Release workflow with `tauri-action`
 - Apache 2.0 license, NOTICE, CREDITS, CONTRIBUTING
 - `docs/SPEC.md` — full behavioral specification
-- `docs/M1_ISSUES.md` — M1 milestone breakdown
+- `docs/M1_ISSUES.md` — local validation checklist
 
-### Known limitations
-- `trash` and `runCommand` actions are not implemented yet
-- EXIF tokens (`{camera}`, `{lens}`, etc.) resolve to empty (dropped
-  from path); EXIF reading lands in v0.2.0
-- Automatic updates are intentionally excluded during local testing
-
-## [0.1.0-alpha.1] — TBD
-
-First tagged release. See `docs/M1_ISSUES.md` for the full checklist.
+### Local-testing status
+- The interface currently ships in English and Spanish
+- Automatic updates are intentionally excluded
+- Installer smoke testing and sustained real-folder testing remain before a
+  public release

@@ -1,9 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CalendarClock, Pause, Pencil, Play, RotateCcw, Square, Trash2 } from 'lucide-react';
+import {
+  CalendarClock,
+  Eye,
+  Pause,
+  Pencil,
+  Play,
+  RotateCcw,
+  Square,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 import { ipc } from '../ipc';
-import type { Folder, OrganizeProgress, Schedule } from '../ipc/types';
+import type {
+  Folder,
+  OrganizeProgress,
+  PreviewResult,
+  Schedule,
+  UndoSessionSummary,
+} from '../ipc/types';
+import { FolderAdvancedSettings } from './FolderAdvancedSettings';
+import { readableIpcError } from '../lib/errors';
 
 interface Props {
   folder: Folder;
@@ -20,17 +38,24 @@ const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
 export function FolderCard({ folder, onNavigateToRules }: Props) {
   const { t, i18n } = useTranslation();
-  const { removeFolder, updateFolderName, updateFolderMode, updateFolderSchedule } = useAppStore();
+  const { rules, removeFolder, updateFolderName, updateFolderMode, updateFolderSchedule } =
+    useAppStore();
   const schedule = folder.schedule ?? DEFAULT_SCHEDULE;
   const [busy, setBusy] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [cancelRequested, setCancelRequested] = useState(false);
   const [progress, setProgress] = useState<OrganizeProgress | null>(null);
-  const [undoSessionId, setUndoSessionId] = useState<string | null>(null);
+  const [undoSession, setUndoSession] = useState<UndoSessionSummary | null>(null);
+  const [undoRecovered, setUndoRecovered] = useState(false);
   const [lastResult, setLastResult] = useState<string | null>(null);
   const [nextRun, setNextRun] = useState<string | null>(null);
   const [scheduleTime, setScheduleTime] = useState(schedule.time);
   const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewResult, setPreviewResult] = useState<PreviewResult | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [modeChanging, setModeChanging] = useState(false);
   const busyRef = useRef(false);
   const activeSessionRef = useRef<string | null>(null);
 
@@ -41,6 +66,19 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
       }
     });
     return () => void off.then((fn) => fn());
+  }, [folder.id]);
+
+  useEffect(() => {
+    let disposed = false;
+    void ipc.files.latestUndoSession(folder.id).then((response) => {
+      if (!disposed && response.success) {
+        setUndoSession(response.data ?? null);
+        setUndoRecovered(Boolean(response.data));
+      }
+    });
+    return () => {
+      disposed = true;
+    };
   }, [folder.id]);
 
   useEffect(() => {
@@ -86,6 +124,74 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
     };
   }, [folder.id, folder.mode, folder.schedule, schedule.enabled]);
 
+  const requestPreview = () =>
+    folder.subfolders.enabled
+      ? ipc.files.previewRecursive(folder.path)
+      : ipc.files.preview(folder.path);
+
+  const hasAssignedDangerousRule = rules.some(
+    (rule) =>
+      rule.enabled &&
+      folder.ruleIds.includes(rule.id) &&
+      (rule.action.type === 'delete' || rule.action.type === 'runCommand'),
+  );
+
+  const confirmDangerousImpact = async (
+    context: 'manual' | 'auto' | 'scheduled',
+  ): Promise<boolean> => {
+    if (!hasAssignedDangerousRule) return true;
+
+    const response = await requestPreview();
+    if (!response.success || !response.data) {
+      const message = readableIpcError(response.error, t);
+      setPreviewError(message);
+      setPreviewResult(null);
+      setPreviewOpen(true);
+      setLastResult(message);
+      return false;
+    }
+    setPreviewResult(response.data);
+    setPreviewError(null);
+    const dangerous = response.data.plan.filter(
+      (item) => item.action?.type === 'delete' || item.action?.type === 'runCommand',
+    );
+    if (response.data.stats.truncated || response.data.stats.errors > 0) {
+      setPreviewOpen(true);
+      setLastResult(t('folderCard.preview.dangerousPreviewBlocked'));
+      return false;
+    }
+    if (dangerous.length === 0) return true;
+
+    const key =
+      context === 'manual'
+        ? 'folderCard.preview.dangerousManualConfirm'
+        : context === 'auto'
+          ? 'folderCard.preview.dangerousAutoConfirm'
+          : 'folderCard.preview.dangerousScheduledConfirm';
+    const examples = dangerous
+      .slice(0, 10)
+      .map((item) => `• ${item.file.name} — ${t(`rules.action.${item.action!.type}`)}`)
+      .join('\n');
+    const remaining =
+      dangerous.length > 10
+        ? `\n${t('folderCard.preview.remaining', { count: dangerous.length - 10 })}`
+        : '';
+    return window.confirm(`${t(key, { count: dangerous.length })}\n\n${examples}${remaining}`);
+  };
+
+  const ensureRecursiveConfirmation = async (): Promise<boolean> => {
+    if (!folder.subfolders.enabled || folder.subfolders.firstRunConfirmed) return true;
+    if (!window.confirm(t('folderCard.advanced.firstRecursiveRun'))) return false;
+
+    const confirmation = await ipc.folders.confirmFirstRun(folder.id);
+    if (!confirmation.success) {
+      setLastResult(readableIpcError(confirmation.error, t));
+      return false;
+    }
+    await useAppStore.getState().loadFolders();
+    return true;
+  };
+
   const handleOrganize = async () => {
     if (busy) {
       if (activeSessionId) {
@@ -95,16 +201,26 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
       return;
     }
 
+    if (!(await confirmDangerousImpact('manual'))) return;
+
+    if (!(await ensureRecursiveConfirmation())) return;
+
     busyRef.current = true;
     activeSessionRef.current = null;
     setBusy(true);
     setCancelRequested(false);
     setProgress(null);
-    setUndoSessionId(null);
     setLastResult(null);
 
     try {
-      const res = await ipc.files.organize(folder.path);
+      const res = folder.subfolders.enabled
+        ? await ipc.files.organizeRecursive(folder.path, {
+            maxDepth: folder.subfolders.maxDepth,
+            destinationMode: folder.subfolders.destinationMode,
+            excludeFolders: folder.excludeFolders,
+            excludePatterns: folder.excludePatterns,
+          })
+        : await ipc.files.organize(folder.path);
       if (res.success && res.data) {
         const { done, failed } = res.data.stats;
         if (res.data.cancelled) {
@@ -115,10 +231,16 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
           setLastResult(t('dashboard.partialOrganized', { moved: done, failed }));
         }
         if (res.data.undoCount > 0) {
-          setUndoSessionId(res.data.sessionId);
+          const latest = await ipc.files.latestUndoSession(folder.id);
+          setUndoSession(latest.success ? (latest.data ?? null) : null);
+          setUndoRecovered(false);
+        } else if (undoSession) {
+          // Keep an older persisted session available, but label it clearly
+          // so it cannot be mistaken for the just-completed run.
+          setUndoRecovered(true);
         }
       } else if (res.error) {
-        setLastResult(res.error);
+        setLastResult(readableIpcError(res.error, t));
       }
     } finally {
       busyRef.current = false;
@@ -130,9 +252,23 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
     }
   };
 
+  const handlePreview = async () => {
+    setPreviewOpen(true);
+    setPreviewLoading(true);
+    setPreviewResult(null);
+    setPreviewError(null);
+    const response = await requestPreview();
+    setPreviewLoading(false);
+    if (response.success && response.data) {
+      setPreviewResult(response.data);
+    } else {
+      setPreviewError(readableIpcError(response.error, t));
+    }
+  };
+
   const handleUndo = async () => {
-    if (!undoSessionId) return;
-    const res = await ipc.files.undoOrganize(undoSessionId);
+    if (!undoSession) return;
+    const res = await ipc.files.undoOrganize(undoSession.sessionId);
     if (res.success && res.data) {
       setLastResult(
         t('folderCard.actions.undone', {
@@ -140,32 +276,70 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
           failed: res.data.failed,
         }),
       );
-      setUndoSessionId(null);
+      const latest = await ipc.files.latestUndoSession(folder.id);
+      setUndoSession(latest.success ? (latest.data ?? null) : null);
+      setUndoRecovered(Boolean(latest.data));
     } else if (res.error) {
-      setLastResult(res.error);
+      setLastResult(readableIpcError(res.error, t));
     }
   };
 
-  const handleWatcherToggle = async () => {
-    if (folder.watcherStatus === 'running') {
-      await ipc.watcher.pause(folder.id);
-    } else if (folder.watcherStatus === 'paused') {
-      await ipc.watcher.resume(folder.id);
-    } else {
-      await ipc.watcher.start(folder.id);
+  const handleDismissUndo = async () => {
+    if (!undoSession || !window.confirm(t('folderCard.actions.dismissUndoConfirm'))) return;
+    const response = await ipc.files.dismissUndo(undoSession.sessionId);
+    if (!response.success) {
+      setLastResult(readableIpcError(response.error, t));
+      return;
     }
+    const latest = await ipc.files.latestUndoSession(folder.id);
+    setUndoSession(latest.success ? (latest.data ?? null) : null);
+    setUndoRecovered(Boolean(latest.data));
+  };
+
+  const handleWatcherToggle = async () => {
+    let response;
+    if (folder.watcherStatus === 'running') {
+      response = await ipc.watcher.pause(folder.id);
+    } else if (folder.watcherStatus === 'paused') {
+      response = await ipc.watcher.resume(folder.id);
+    } else {
+      response = await ipc.watcher.start(folder.id);
+    }
+    if (!response.success) setLastResult(readableIpcError(response.error, t));
     await useAppStore.getState().loadFolders();
   };
 
   const handleModeChange = async (mode: 'single' | 'auto' | 'scheduled') => {
-    if (mode !== folder.mode) {
-      await updateFolderMode(folder.id, mode);
+    if (mode === folder.mode || modeChanging) return;
+    setModeChanging(true);
+    try {
+      let disableSubfolders = false;
+      if (mode === 'auto' && folder.subfolders.enabled) {
+        if (!window.confirm(t('folderCard.advanced.autoDisablesRecursiveConfirm'))) return;
+        disableSubfolders = true;
+      }
+      if (mode === 'auto' && !(await confirmDangerousImpact('auto'))) return;
+      if (mode === 'scheduled' && schedule.enabled) {
+        if (!(await confirmDangerousImpact('scheduled'))) return;
+        if (!(await ensureRecursiveConfirmation())) return;
+      }
+      const changed = await updateFolderMode(folder.id, mode, disableSubfolders);
+      if (!changed) {
+        setLastResult(readableIpcError(useAppStore.getState().error ?? undefined, t));
+      }
+    } finally {
+      setModeChanging(false);
     }
   };
 
   const saveSchedule = async (nextSchedule: Schedule) => {
+    if (nextSchedule.enabled && !schedule.enabled) {
+      if (!(await confirmDangerousImpact('scheduled'))) return;
+      if (!(await ensureRecursiveConfirmation())) return;
+    }
     setScheduleSaving(true);
-    await updateFolderSchedule(folder.id, nextSchedule);
+    const saved = await updateFolderSchedule(folder.id, nextSchedule);
+    if (!saved) setLastResult(readableIpcError(useAppStore.getState().error ?? undefined, t));
     setScheduleSaving(false);
   };
 
@@ -189,6 +363,12 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
     const name = window.prompt(t('folderCard.rename'), folder.name)?.trim();
     if (name && name !== folder.name) {
       await updateFolderName(folder.id, name);
+    }
+  };
+
+  const handleRemove = async () => {
+    if (window.confirm(t('folderCard.removeConfirm', { name: folder.name }))) {
+      await removeFolder(folder.id);
     }
   };
 
@@ -216,6 +396,12 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
         minute: '2-digit',
       }).format(new Date(nextRun))
     : null;
+  const formattedUndoAt = undoSession
+    ? new Intl.DateTimeFormat(i18n.language, {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      }).format(new Date(undoSession.at))
+    : null;
 
   return (
     <div className="card space-y-4">
@@ -234,6 +420,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
           <button
             key={mode}
             onClick={() => void handleModeChange(mode)}
+            disabled={modeChanging || busy || scheduleSaving}
             className={`rounded px-2 py-1.5 transition-colors ${
               folder.mode === mode
                 ? 'bg-accent-600 text-white'
@@ -259,7 +446,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
                   : 'bg-primary-800 text-primary-400'
               }`}
               onClick={() => void saveSchedule({ ...schedule, enabled: !schedule.enabled })}
-              disabled={scheduleSaving}
+              disabled={scheduleSaving || modeChanging}
             >
               {t(schedule.enabled ? 'folderCard.schedule.enabled' : 'folderCard.schedule.disabled')}
             </button>
@@ -277,7 +464,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
                       : 'bg-primary-800 text-primary-400'
                   }`}
                   onClick={() => void toggleScheduleDay(index)}
-                  disabled={scheduleSaving}
+                  disabled={scheduleSaving || modeChanging}
                   title={t(`folderCard.schedule.day.${day}.long`)}
                 >
                   {t(`folderCard.schedule.day.${day}.short`)}
@@ -297,7 +484,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
               value={scheduleTime}
               onChange={(event) => setScheduleTime(event.target.value)}
               onBlur={() => void saveScheduleTime()}
-              disabled={scheduleSaving}
+              disabled={scheduleSaving || modeChanging}
             />
           </div>
 
@@ -321,11 +508,22 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
         </button>
       </div>
 
+      <FolderAdvancedSettings folder={folder} />
+
       <div className="flex flex-wrap items-center gap-2 border-t border-primary-800 pt-3">
+        <button
+          className="btn-secondary"
+          onClick={() => void handlePreview()}
+          disabled={busy || modeChanging}
+          title={t('folderCard.actions.preview')}
+        >
+          <Eye size={14} />
+          {t('folderCard.actions.preview')}
+        </button>
         <button
           className="btn-primary flex-1"
           onClick={() => void handleOrganize()}
-          disabled={busy && !activeSessionId}
+          disabled={(busy && !activeSessionId) || modeChanging}
         >
           {busy ? <Square size={14} /> : <Play size={14} />}
           {busy
@@ -336,6 +534,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
           <button
             className="btn-secondary"
             onClick={() => void handleWatcherToggle()}
+            disabled={busy || modeChanging}
             title={t(
               folder.watcherStatus === 'running'
                 ? 'folderCard.actions.pause'
@@ -347,24 +546,34 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
             {folder.watcherStatus === 'running' ? <Pause size={14} /> : <Play size={14} />}
           </button>
         )}
-        {undoSessionId && (
+        {undoSession && (
           <button className="btn-secondary" onClick={() => void handleUndo()}>
             <RotateCcw size={14} />
             {t('folderCard.actions.undo')}
+          </button>
+        )}
+        {undoSession && (
+          <button
+            className="btn-ghost p-2"
+            onClick={() => void handleDismissUndo()}
+            title={t('folderCard.actions.dismissUndo')}
+          >
+            <X size={14} />
           </button>
         )}
         <button
           className="btn-ghost"
           onClick={() => void handleRename()}
           title={t('folderCard.rename')}
+          disabled={busy || modeChanging}
         >
           <Pencil size={14} />
         </button>
         <button
           className="btn-ghost"
-          onClick={() => void removeFolder(folder.id)}
+          onClick={() => void handleRemove()}
           title={t('folderCard.actions.remove')}
-          disabled={busy}
+          disabled={busy || modeChanging}
         >
           <Trash2 size={14} />
         </button>
@@ -376,6 +585,126 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
         </p>
       )}
       {lastResult && <p className="text-xs text-primary-300">{lastResult}</p>}
+      {undoSession && (
+        <p className="text-xs text-primary-500">
+          {t(
+            undoRecovered ? 'folderCard.actions.undoRecovered' : 'folderCard.actions.undoAvailable',
+            { count: undoSession.entryCount },
+          )}
+          {formattedUndoAt ? ` · ${formattedUndoAt}` : ''}
+        </p>
+      )}
+
+      {previewOpen && (
+        <PreviewDialog
+          result={previewResult}
+          loading={previewLoading}
+          error={previewError}
+          onClose={() => setPreviewOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function PreviewDialog({
+  result,
+  loading,
+  error,
+  onClose,
+}: {
+  result: PreviewResult | null;
+  loading: boolean;
+  error: string | null;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const actionable = result?.plan.filter((item) => item.action) ?? [];
+  const visibleActions = actionable.slice(0, 200);
+  const unmatched = (result?.plan.length ?? 0) - actionable.length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <section
+        className="card max-h-[85vh] w-full max-w-3xl overflow-hidden p-0"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="folder-preview-title"
+      >
+        <header className="flex items-center justify-between border-b border-primary-800 px-5 py-4">
+          <h2 id="folder-preview-title" className="text-lg font-semibold text-primary-50">
+            {t('folderCard.preview.title')}
+          </h2>
+          <button className="btn-ghost p-2" onClick={onClose} aria-label={t('common.close')}>
+            <X size={18} />
+          </button>
+        </header>
+
+        <div className="max-h-[65vh] space-y-3 overflow-y-auto p-5">
+          {loading && <p className="text-sm text-primary-400">{t('common.loading')}</p>}
+          {error && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
+          {result && (
+            <>
+              <p className="text-sm text-primary-300">
+                {t('folderCard.preview.summary', { count: actionable.length })}
+                {unmatched > 0 && ` · ${t('folderCard.preview.unmatched', { count: unmatched })}`}
+              </p>
+              {result.stats.truncated && (
+                <p className="rounded-md bg-yellow-500/10 p-3 text-xs text-yellow-200">
+                  {t('folderCard.preview.truncated')}
+                </p>
+              )}
+              {result.stats.errors > 0 && (
+                <p className="rounded-md bg-yellow-500/10 p-3 text-xs text-yellow-200">
+                  {t('folderCard.preview.scanErrors', { count: result.stats.errors })}
+                </p>
+              )}
+              {actionable.length === 0 ? (
+                <p className="py-8 text-center text-sm text-primary-500">
+                  {t('folderCard.preview.noMatches')}
+                </p>
+              ) : (
+                <div className="overflow-hidden rounded-md border border-primary-800">
+                  {visibleActions.map((item) => (
+                    <div
+                      key={item.file.path}
+                      className="grid gap-1 border-b border-primary-800 px-3 py-2 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_12rem]"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm text-primary-200" title={item.file.path}>
+                          {item.file.name}
+                        </p>
+                        <p className="truncate text-xs text-primary-500">{item.ruleName}</p>
+                      </div>
+                      <div className="text-xs text-primary-400 sm:text-right">
+                        <p>{t(`rules.action.${item.action!.type}`)}</p>
+                        {item.action?.type === 'move' && (
+                          <p className="truncate" title={item.action.destination}>
+                            {item.action.destination}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {actionable.length > visibleActions.length && (
+                <p className="text-xs text-primary-500">
+                  {t('folderCard.preview.remaining', {
+                    count: actionable.length - visibleActions.length,
+                  })}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+
+        <footer className="flex justify-end border-t border-primary-800 px-5 py-4">
+          <button className="btn-secondary" onClick={onClose}>
+            {t('common.close')}
+          </button>
+        </footer>
+      </section>
     </div>
   );
 }

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 /// A single condition that a file must satisfy for a rule to match.
 ///
 /// Multiple conditions are ANDed together (see `match_file_against_rule`).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum Condition {
     /// File extension matches one of `value` (with or without leading dot).

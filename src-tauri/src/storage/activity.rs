@@ -24,6 +24,19 @@ pub struct ActivityFilters {
 }
 
 impl ActivityRepo {
+    /// Convert delete rows left pending by a previous process into an honest
+    /// review state. File existence is not proof of whether every external
+    /// filesystem effect completed, so startup never guesses success.
+    pub fn mark_interrupted_deletes_for_review(&self) -> Result<usize> {
+        let conn = self.conn.lock();
+        let changed = conn.execute(
+            "UPDATE activity SET error = 'DELETE_INTERRUPTED_REVIEW_REQUIRED', success = 0 \
+             WHERE type = 'delete' AND error = 'DELETE_IN_PROGRESS'",
+            [],
+        )?;
+        Ok(changed)
+    }
+
     pub fn list(
         &self,
         filters: &ActivityFilters,
@@ -123,23 +136,91 @@ impl ActivityRepo {
         Ok(())
     }
 
+    pub fn update(&self, entry: &ActivityEntry) -> Result<()> {
+        let conn = self.conn.lock();
+        let changed = conn.execute(
+            "UPDATE activity SET at=?2, type=?3, file_name=?4, file_path=?5, folder_id=?6, \
+             rule_id=?7, rule_name=?8, destination=?9, command=?10, exit_code=?11, output=?12, \
+             duration_ms=?13, timed_out=?14, success=?15, error=?16 WHERE id=?1",
+            rusqlite::params![
+                entry.id.to_string(),
+                entry.at.to_rfc3339(),
+                entry.r#type.as_str(),
+                entry.file_name,
+                entry.file_path,
+                entry.folder_id.map(|id| id.to_string()),
+                entry.rule_id.map(|id| id.to_string()),
+                entry.rule_name,
+                entry.destination,
+                entry.command,
+                entry.exit_code,
+                entry.output,
+                entry.duration_ms,
+                entry.timed_out.map(i32::from),
+                i32::from(entry.success),
+                entry.error,
+            ],
+        )?;
+        if changed != 1 {
+            anyhow::bail!("ACTIVITY_NOT_FOUND");
+        }
+        Ok(())
+    }
+
     pub fn delete(&self, ids: &[Uuid]) -> Result<()> {
         if ids.is_empty() {
             return Ok(());
         }
-        let conn = self.conn.lock();
+        let mut conn = self.conn.lock();
+        let transaction = conn.transaction()?;
         let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
-        let sql = format!("DELETE FROM activity WHERE id IN ({})", placeholders);
         let id_strs: Vec<String> = ids.iter().map(|i| i.to_string()).collect();
         let params: Vec<&dyn rusqlite::ToSql> =
             id_strs.iter().map(|s| s as &dyn rusqlite::ToSql).collect();
-        conn.execute(&sql, params.as_slice())?;
+
+        // If an unresolved command-review row is removed, make its durable
+        // claim announce itself again on the next processing pass. Otherwise
+        // clearing History could leave a command blocked with no visible way
+        // for the user to approve or reject a retry.
+        let review_sql = format!(
+            "SELECT rule_id, file_path, command FROM activity \
+             WHERE id IN ({placeholders}) \
+               AND error LIKE 'COMMAND_INTERRUPTED_REVIEW_REQUIRED%'"
+        );
+        let reviews: Vec<(String, String, String)> = {
+            let mut statement = transaction.prepare(&review_sql)?;
+            let rows = statement.query_map(params.as_slice(), |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+            })?;
+            let mut collected = Vec::new();
+            for row in rows {
+                collected.push(row?);
+            }
+            collected
+        };
+        for (rule_id, file_path, command) in reviews {
+            transaction.execute(
+                "UPDATE command_ledger SET in_progress = 2 \
+                 WHERE rule_id = ?1 AND file_path = ?2 AND command = ?3 AND in_progress = 3",
+                rusqlite::params![rule_id, file_path, command],
+            )?;
+        }
+
+        let delete_sql = format!("DELETE FROM activity WHERE id IN ({placeholders})");
+        transaction.execute(&delete_sql, params.as_slice())?;
+        transaction.commit()?;
         Ok(())
     }
 
     pub fn clear(&self) -> Result<()> {
-        let conn = self.conn.lock();
-        conn.execute("DELETE FROM activity", [])?;
+        let mut conn = self.conn.lock();
+        let transaction = conn.transaction()?;
+        transaction.execute(
+            "UPDATE command_ledger SET in_progress = 2 WHERE in_progress = 3",
+            [],
+        )?;
+        transaction.execute("DELETE FROM activity", [])?;
+        transaction.commit()?;
         Ok(())
     }
 }

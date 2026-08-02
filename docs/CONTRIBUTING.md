@@ -5,11 +5,12 @@ Thanks for your interest! This document covers the basics.
 ## Quick start
 
 ```bash
-git clone https://github.com/filegrove/filegrove.git
-cd filegrove
 npm install
 npm run tauri:dev
 ```
+
+Run those commands from the local FileGrove repository. The project is still in
+local testing and is not published on GitHub yet.
 
 For prerequisites (Rust, Node 20+, system libs), see the
 [Tauri 2 getting started guide](https://tauri.app/v2/guides/getting-started/prerequisites/).
@@ -25,8 +26,7 @@ See `docs/SPEC.md` §3.3 for the full layout. The short version:
 
 ## Development workflow
 
-1. Pick an issue from the
-   [M1 milestone](https://github.com/filegrove/filegrove/milestone/1).
+1. Pick one of the pending items in `docs/M1_ISSUES.md`.
 2. Branch: `git checkout -b feat/short-description`.
 3. Code. Run checks locally:
    ```bash
@@ -36,7 +36,8 @@ See `docs/SPEC.md` §3.3 for the full layout. The short version:
 4. Commit using
    [conventional commits](https://www.conventionalcommits.org/):
    `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`.
-5. Open a PR. CI must pass before merge.
+5. Keep the commit local until the project is ready for GitHub. Once remote
+   collaboration starts, open a PR and require all checks to pass before merge.
 
 ## Code style
 
@@ -66,7 +67,7 @@ Locale files live in `src/i18n/locales/`. To add a language:
 
 ## Reporting bugs
 
-Open an issue with:
+Record a local bug report with:
 
 - FileGrove version (`About` page)
 - OS + version

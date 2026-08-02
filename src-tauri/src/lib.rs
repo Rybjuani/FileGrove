@@ -6,14 +6,13 @@
 
 mod domain;
 mod engine;
-#[cfg(not(test))]
 mod exif;
 #[cfg(not(test))]
 mod ipc;
 mod paths;
 #[cfg(not(test))]
 mod scheduler;
-#[cfg(not(test))]
+mod shutdown;
 mod storage;
 #[cfg(not(test))]
 mod tray;
@@ -27,6 +26,8 @@ use parking_lot::RwLock;
 #[cfg(not(test))]
 use tauri::Manager;
 #[cfg(not(test))]
+use tauri_plugin_autostart::ManagerExt;
+#[cfg(not(test))]
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 #[cfg(not(test))]
@@ -39,6 +40,7 @@ pub struct AppState {
     pub cancellations: Arc<engine::cancellation::CancellationRegistry>,
     pub watcher: Arc<watcher::WatcherService>,
     pub scheduler: Arc<scheduler::SchedulerService>,
+    pub shutdown: Arc<shutdown::ShutdownCoordinator>,
     pub tray: Arc<RwLock<Option<tray::TrayService>>>,
 }
 
@@ -48,11 +50,16 @@ pub fn run() {
     init_tracing();
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init())
+        // Register first: a second launch should focus the existing window
+        // before any watcher, scheduler, tray or database service is started.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
@@ -64,6 +71,12 @@ pub fn run() {
             // Open the database from the user data dir.
             let db = storage::Database::open_default(app.handle())?;
             db.run_migrations()?;
+            db.undo().reconcile()?;
+            db.command_ledger().reset_in_progress()?;
+            let interrupted_deletes = db.activity().mark_interrupted_deletes_for_review()?;
+            if interrupted_deletes > 0 {
+                tracing::warn!(interrupted_deletes, "delete activities require review");
+            }
             let db = Arc::new(db);
 
             let cancellations = Arc::new(engine::cancellation::CancellationRegistry::default());
@@ -80,12 +93,17 @@ pub fn run() {
             // Restore background services exactly as they were when the app closed.
             watcher.init(app.handle())?;
             tauri::async_runtime::block_on(scheduler.init())?;
+            if db.settings().get_automation_paused() {
+                watcher.pause_all(app.handle());
+                scheduler.pause_all();
+            }
 
             let state = AppState {
                 db: db.clone(),
                 cancellations,
                 watcher: watcher.clone(),
                 scheduler: scheduler.clone(),
+                shutdown: Arc::new(shutdown::ShutdownCoordinator::default()),
                 tray: Arc::new(RwLock::new(None)),
             };
             app.manage(state);
@@ -93,12 +111,24 @@ pub fn run() {
             // Initialize the tray icon (best-effort; not fatal if it fails).
             match tray::TrayService::new(app.handle()) {
                 Ok(t) => {
+                    if let Err(error) = t.set_visible(db.settings().get_show_tray_icon()) {
+                        tracing::warn!("Could not apply tray visibility: {error}");
+                    }
                     *app.state::<AppState>().tray.write() = Some(t);
                     tracing::info!("Tray icon initialized");
                 }
                 Err(e) => {
                     tracing::warn!("Tray icon init failed: {e}");
                 }
+            }
+
+            let autolaunch_result = if db.settings().get_launch_at_startup() {
+                app.autolaunch().enable()
+            } else {
+                app.autolaunch().disable()
+            };
+            if let Err(error) = autolaunch_result {
+                tracing::warn!("Could not reconcile launch-at-startup setting: {error}");
             }
 
             tracing::info!("FileGrove ready");
@@ -111,6 +141,7 @@ pub fn run() {
             ipc::app::minimize,
             ipc::app::maximize,
             ipc::app::close,
+            ipc::app::set_automation_paused,
             // Folders
             ipc::folders::list_folders,
             ipc::folders::add,
@@ -120,6 +151,8 @@ pub fn run() {
             ipc::folders::assign_rules,
             ipc::folders::unassign_rules,
             ipc::folders::update_subfolders_config,
+            ipc::folders::update_configuration,
+            ipc::folders::update_exclusions,
             ipc::folders::update_schedule,
             ipc::folders::get_next_run,
             ipc::folders::select_destination,
@@ -131,6 +164,9 @@ pub fn run() {
             ipc::rules::update,
             ipc::rules::delete_rule,
             ipc::rules::toggle,
+            ipc::rules::reorder_rules,
+            ipc::commands::test_command,
+            ipc::commands::allow_interrupted_retry,
             // Files
             ipc::files::scan,
             ipc::files::scan_recursive,
@@ -140,6 +176,7 @@ pub fn run() {
             ipc::files::organize_recursive,
             // Organize session
             ipc::organize::cancel,
+            ipc::organize::latest_undo_session,
             ipc::organize::undo,
             ipc::organize::dismiss_undo,
             // Watcher
@@ -164,15 +201,42 @@ pub fn run() {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 // Hide instead of close if "minimize to tray" is on.
                 if let Some(state) = window.app_handle().try_state::<AppState>() {
-                    if state.db.settings().get_minimize_to_tray() {
+                    let tray_visible = state
+                        .tray
+                        .read()
+                        .as_ref()
+                        .is_some_and(tray::TrayService::is_visible);
+                    if state.shutdown.phase() == shutdown::ShutdownPhase::Running
+                        && state.db.settings().get_minimize_to_tray()
+                        && tray_visible
+                    {
                         window.hide().ok();
                         api.prevent_close();
+                    } else {
+                        // A tray icon keeps Tauri's event loop alive after the
+                        // last window closes. Explicitly exit here; otherwise
+                        // disabling minimize-to-tray can leave an invisible
+                        // process that has no window to reopen.
+                        api.prevent_close();
+                        shutdown::request_exit(window.app_handle());
                     }
                 }
             }
         })
-        .run(tauri::generate_context!())
-        .expect("error while running FileGrove application");
+        .build(tauri::generate_context!())
+        .expect("error while building FileGrove application")
+        .run(|app, event| match event {
+            tauri::RunEvent::ExitRequested { api, .. } => {
+                if let Some(state) = app.try_state::<AppState>() {
+                    if state.shutdown.phase() != shutdown::ShutdownPhase::ReadyToExit {
+                        api.prevent_exit();
+                        shutdown::request_exit(app);
+                    }
+                }
+            }
+            tauri::RunEvent::Exit => shutdown::force_quiesce(app),
+            _ => {}
+        });
 }
 
 #[cfg(not(test))]

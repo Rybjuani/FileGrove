@@ -4,4 +4,5 @@
 //! `{month}`, `{camera}`, etc. This module resolves those tokens against
 //! a file's metadata.
 
+pub mod safety;
 pub mod tokens;

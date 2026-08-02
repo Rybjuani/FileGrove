@@ -1,6 +1,7 @@
 # Icons
 
-Place the following files in this directory before building:
+The required desktop and mobile icon variants are already generated in this
+directory:
 
 - `32x32.png`
 - `128x128.png`
@@ -20,13 +21,4 @@ npm run tauri icon path/to/source-1024x1024.png
 This will generate all required sizes and formats from a single 1024×1024
 PNG with transparency.
 
-## Placeholder
-
-Until you provide real artwork, the build will fail. As a stopgap, use a
-simple solid-color square:
-
-```bash
-# Generate a 1024x1024 dark-green square
-convert -size 1024x1024 xc:'#0f172a' -gravity center -fill '#10b981' -annotate +0+0 'FG' icon-source.png
-npm run tauri icon icon-source.png
-```
+Regenerate them only when the source artwork changes.

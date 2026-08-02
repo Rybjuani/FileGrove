@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use parking_lot::Mutex;
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 use serde_json::Value;
 
 pub struct SettingsRepo {
@@ -56,16 +56,48 @@ impl SettingsRepo {
         Ok(())
     }
 
-    pub fn set_many(&self, updates: &serde_json::Map<String, Value>) -> Result<()> {
+    pub fn set_many(
+        &self,
+        updates: &serde_json::Map<String, Value>,
+    ) -> Result<Vec<(String, Option<Value>)>> {
         let mut conn = self.conn.lock();
         let tx = conn.transaction()?;
+        let mut previous = Vec::with_capacity(updates.len());
         for (k, v) in updates {
+            let old_serialized = tx
+                .query_row("SELECT value FROM settings WHERE key = ?1", [k], |row| {
+                    row.get::<_, String>(0)
+                })
+                .optional()?;
+            let old_value = old_serialized
+                .map(|serialized| serde_json::from_str(&serialized))
+                .transpose()?;
+            previous.push((k.clone(), old_value));
             let serialized = serde_json::to_string(v)?;
             tx.execute(
                 "INSERT INTO settings (key, value) VALUES (?1, ?2) \
                  ON CONFLICT(key) DO UPDATE SET value = excluded.value",
                 rusqlite::params![k, serialized],
             )?;
+        }
+        tx.commit()?;
+        Ok(previous)
+    }
+
+    pub fn restore(&self, snapshot: &[(String, Option<Value>)]) -> Result<()> {
+        let mut conn = self.conn.lock();
+        let tx = conn.transaction()?;
+        for (key, value) in snapshot {
+            if let Some(value) = value {
+                let serialized = serde_json::to_string(value)?;
+                tx.execute(
+                    "INSERT INTO settings (key, value) VALUES (?1, ?2) \
+                     ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                    rusqlite::params![key, serialized],
+                )?;
+            } else {
+                tx.execute("DELETE FROM settings WHERE key = ?1", [key])?;
+            }
         }
         tx.commit()?;
         Ok(())
@@ -79,6 +111,46 @@ impl SettingsRepo {
             .flatten()
             .and_then(|v| v.as_bool())
             .unwrap_or(true)
+    }
+
+    pub fn get_show_tray_icon(&self) -> bool {
+        self.get("showTrayIcon")
+            .ok()
+            .flatten()
+            .and_then(|value| value.as_bool())
+            .unwrap_or(true)
+    }
+
+    pub fn get_launch_at_startup(&self) -> bool {
+        self.get("launchAtStartup")
+            .ok()
+            .flatten()
+            .and_then(|value| value.as_bool())
+            .unwrap_or(false)
+    }
+
+    pub fn get_notifications(&self) -> bool {
+        self.get("notifications")
+            .ok()
+            .flatten()
+            .and_then(|value| value.as_bool())
+            .unwrap_or(true)
+    }
+
+    pub fn get_automation_paused(&self) -> bool {
+        self.get("automationPaused")
+            .ok()
+            .flatten()
+            .and_then(|value| value.as_bool())
+            .unwrap_or(false)
+    }
+
+    pub fn get_language(&self) -> String {
+        self.get("language")
+            .ok()
+            .flatten()
+            .and_then(|value| value.as_str().map(str::to_string))
+            .unwrap_or_else(|| "en".to_string())
     }
 
     pub fn get_conflict_behavior_str(&self) -> String {

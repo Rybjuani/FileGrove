@@ -4,10 +4,6 @@
 > that watches your folders and organizes files automatically based on
 > rules you define.
 
-[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![CI](https://github.com/filegrove/filegrove/actions/workflows/ci.yml/badge.svg)](https://github.com/filegrove/filegrove/actions)
-[![Release](https://img.shields.io/github/v/release/filegrove/filegrove.svg)](https://github.com/filegrove/filegrove/releases)
-
 ## What is this?
 
 FileGrove is a cross-platform desktop application (Windows, macOS,
@@ -27,28 +23,29 @@ is based on the behavioral specification in [`docs/SPEC.md`](docs/SPEC.md).
 - Rule engine with 9 condition types (extension, name contains/starts/ends, regex, size, age)
 - Three folder modes: manual, automatic (real-time), scheduled (cron)
 - Path templates with date and EXIF tokens (`{year}/{month}/{name}`)
+- Recoverable Recycle Bin actions and guarded permanent deletion
+- Safe shell commands with test mode, timeout, cancellation, output capture,
+  and change fingerprints that prevent accidental reruns
 - Recursive subfolder scanning with excludes
-- Undo log — revert any organize operation
-- Activity history with full audit trail
+- Durable Undo journal for moved files, including retained overwrite backups
+  while the related Undo session remains available
+- Activity history with command output, failures, and interrupted-action review
 - System tray integration
-- 8 languages (English, Spanish, French, German, Italian, Portuguese, Russian, Turkish)
-- Cross-platform: Windows, macOS, Linux
-- ~10 MB bundle (Tauri, not Electron)
+- English and Spanish interface
+- Single-instance desktop process with automatic-mode watchers and schedules
 - **No telemetry, no license server, no paywall** — fully open-source
 
 ## Quick start
 
 ### Prerequisites
 
-- [Rust](https://rustup.rs) 1.75+
+- [Rust](https://rustup.rs) 1.77.2+
 - [Node.js](https://nodejs.org) 20+
 - [Tauri 2 prerequisites](https://tauri.app/v2/guides/getting-started/prerequisites/)
 
 ### Install & run
 
 ```bash
-git clone https://github.com/filegrove/filegrove.git
-cd filegrove
 npm install
 npm run tauri dev
 ```
@@ -64,28 +61,26 @@ Output: `src-tauri/target/release/bundle/`
 ## Documentation
 
 - [`docs/SPEC.md`](docs/SPEC.md) — Full behavioral specification
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — Architecture deep-dive
-- [`docs/IPC.md`](docs/IPC.md) — IPC channel reference
-- [`docs/RULES.md`](docs/RULES.md) — Rule engine semantics
 - [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — How to contribute
 
 ## Roadmap
 
-See [Milestones](https://github.com/filegrove/filegrove/milestones) for
-the current roadmap. v0.1.0 (MVP) targets:
+The current v0.1.0 build is in local testing. Implemented scope includes:
 
 - Folder watching + rule engine + manual/auto/scheduled organize
 - Recursive scan, undo log, activity history
-- Tray integration and onboarding tour
+- Native Recycle Bin, EXIF tokens, safe command actions, and conflict handling
+- Tray integration and single-instance startup
 - English + Spanish localization
 
-Postponed until after local testing: EXIF-based sorting and run-command action.
-Automatic updates are intentionally out of scope while FileGrove is used locally.
+Before any public repository or release, the app should receive sustained local
+testing with disposable folders and a separate installer smoke test. Automatic
+updates are intentionally not implemented during this local-testing phase.
 
 ## Contributing
 
-Pull requests welcome! Please read
-[`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) first.
+Development is currently local. See
+[`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) for the project conventions.
 
 ## License
 

@@ -1,5 +1,12 @@
 # SPEC.md — File Organizer (clean-room reimplementation)
 
+> **Current implementation scope (local test build).** This is a reference
+> specification and long-term product map, not a claim that every described
+> service ships today. The current FileGrove build is local-only and
+> intentionally excludes automatic updates, accounts/licensing, telemetry,
+> public release infrastructure, and GitHub distribution. `README.md` and
+> `docs/M1_ISSUES.md` are the source of truth for what is ready to test now.
+
 > **Purpose.** This document is a behavioral specification derived from
 > black-box observation of **File Arbor v1.1.2** by Furkan Bagci
 > (`https://github.com/furkanbagci34/file-arbor-releases`). It describes

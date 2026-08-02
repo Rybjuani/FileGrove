@@ -1,14 +1,18 @@
 //! Tray icon service — see SPEC §7.4.
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use anyhow::Result;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
-    tray::TrayIconBuilder,
+    tray::{TrayIcon, TrayIconBuilder},
     AppHandle, Manager,
 };
 
 pub struct TrayService {
     _app: AppHandle,
+    icon: TrayIcon,
+    visible: AtomicBool,
 }
 
 impl TrayService {
@@ -24,35 +28,53 @@ impl TrayService {
             &[&open_app, &pause_all, &resume_all, &separator, &quit],
         )?;
 
-        let _tray = TrayIconBuilder::with_id("main")
+        let mut tray_builder = TrayIconBuilder::with_id("main")
             .tooltip("FileGrove")
             .menu(&menu)
             .on_menu_event(|app, event| match event.id.as_ref() {
                 "open_app" => {
                     if let Some(w) = app.get_webview_window("main") {
                         let _ = w.show();
+                        let _ = w.unminimize();
                         let _ = w.set_focus();
                     }
                 }
                 "pause_all" => {
                     tracing::info!("tray: pause all");
-                    if let Some(state) = app.try_state::<crate::AppState>() {
-                        state.watcher.pause_all(app);
+                    if let Err(error) = crate::ipc::app::apply_automation_paused(app, true) {
+                        tracing::warn!("could not pause automation: {error}");
                     }
                 }
                 "resume_all" => {
                     tracing::info!("tray: resume all");
-                    if let Some(state) = app.try_state::<crate::AppState>() {
-                        state.watcher.resume_all(app);
+                    if let Err(error) = crate::ipc::app::apply_automation_paused(app, false) {
+                        tracing::warn!("could not resume automation: {error}");
                     }
                 }
                 "quit" => {
-                    app.exit(0);
+                    crate::shutdown::request_exit(app);
                 }
                 _ => {}
-            })
-            .build(app)?;
+            });
+        if let Some(default_icon) = app.default_window_icon().cloned() {
+            tray_builder = tray_builder.icon(default_icon);
+        }
+        let icon = tray_builder.build(app)?;
 
-        Ok(Self { _app: app.clone() })
+        Ok(Self {
+            _app: app.clone(),
+            icon,
+            visible: AtomicBool::new(true),
+        })
+    }
+
+    pub fn set_visible(&self, visible: bool) -> Result<()> {
+        self.icon.set_visible(visible)?;
+        self.visible.store(visible, Ordering::Release);
+        Ok(())
+    }
+
+    pub fn is_visible(&self) -> bool {
+        self.visible.load(Ordering::Acquire)
     }
 }

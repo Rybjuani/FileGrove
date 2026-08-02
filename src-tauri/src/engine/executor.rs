@@ -1,7 +1,4 @@
-//! Action executor — see SPEC §5.3.
-//!
-//! Executes a planned action against a file: move / trash / delete /
-//! runCommand. Records every outcome in the activity log.
+//! Executes planned actions and records their activity/undo outcomes.
 
 use std::path::{Path, PathBuf};
 
@@ -10,28 +7,25 @@ use uuid::Uuid;
 
 use crate::domain::action::Action;
 use crate::domain::activity::{ActivityEntry, ActivityType};
-use crate::domain::undo::UndoEntry;
+use crate::engine::cancellation::CancellationToken;
+use crate::engine::command::{execute_shell_command_cancellable, CommandExecution};
+pub use crate::engine::file_ops::ConflictBehavior;
+use crate::engine::file_ops::{
+    execute_prepared_move_cancellable, prepare_move, trash_file, MoveOutcome, PrepareMoveOutcome,
+};
+use crate::engine::keyed_lock::KeyedAsyncLock;
 use crate::engine::matcher::FileItem;
-use crate::paths::tokens::resolve_destination;
+use crate::engine::planner::compute_organize_plan;
+use crate::paths::safety::{
+    validate_destination_directory, validate_destination_outside_watched_folders,
+    validate_scan_root, validate_source_file,
+};
+use crate::paths::tokens::resolve_destination_from_file;
+use crate::storage::command_ledger::CommandClaim;
 use crate::storage::Database;
 
-/// How to handle a destination collision during `Move`.
-#[derive(Debug, Clone, Copy)]
-pub enum ConflictBehavior {
-    Rename,
-    Overwrite,
-    Skip,
-}
-
-impl ConflictBehavior {
-    pub fn from_str(s: &str) -> Self {
-        match s {
-            "overwrite" => Self::Overwrite,
-            "skip" => Self::Skip,
-            _ => Self::Rename,
-        }
-    }
-}
+static DESTINATION_LOCKS: once_cell::sync::Lazy<KeyedAsyncLock<String>> =
+    once_cell::sync::Lazy::new(KeyedAsyncLock::default);
 
 /// Outcome of a single action.
 #[derive(Debug, Clone)]
@@ -40,6 +34,7 @@ pub struct ActionResult {
     pub skipped: bool,
     pub new_path: Option<PathBuf>,
     pub error: Option<String>,
+    pub command_execution: Option<CommandExecution>,
 }
 
 pub struct Organizer<'a> {
@@ -47,6 +42,8 @@ pub struct Organizer<'a> {
     pub session_id: Uuid,
     pub scan_root: PathBuf,
     pub conflict_behavior: ConflictBehavior,
+    pub preserve_relative_structure: bool,
+    pub cancellation: Option<CancellationToken>,
 }
 
 impl<'a> Organizer<'a> {
@@ -57,154 +54,448 @@ impl<'a> Organizer<'a> {
         rule_id: Option<Uuid>,
         rule_name: Option<&str>,
     ) -> ActionResult {
-        let result = match action {
-            Action::Move { destination } => self.execute_move(file, destination).await,
-            Action::Trash => self.execute_trash(file).await,
-            Action::Delete => self.execute_delete(file).await,
-            Action::RunCommand { .. } => {
-                // Postponed to v0.2.0 per MVP decision.
-                ActionResult {
-                    success: false,
-                    skipped: true,
-                    new_path: None,
-                    error: Some("RUN_COMMAND_NOT_IMPLEMENTED".into()),
-                }
+        if let Err(error) = self
+            .db
+            .undo()
+            .ensure_source_available(Path::new(&file.path))
+        {
+            let result = action_error(error.to_string());
+            self.record_activity(file, action, rule_id, rule_name, &result);
+            return result;
+        }
+        let current_file = match self.revalidate_plan(file, action, rule_id) {
+            Ok(file) => file,
+            Err(error) => {
+                let result = action_error(error);
+                self.record_activity(file, action, rule_id, rule_name, &result);
+                return result;
+            }
+        };
+        let pending_activity_id = if matches!(action, Action::Delete) {
+            let pending_id = Uuid::new_v4();
+            let pending = self.activity_entry(
+                pending_id,
+                &current_file,
+                action,
+                rule_id,
+                rule_name,
+                &action_error("DELETE_IN_PROGRESS".to_string()),
+            );
+            if let Err(error) = self.db.activity().insert(&pending) {
+                // Permanent deletion is forbidden unless its audit row is
+                // durable first. A disk-full/database error must leave the
+                // source file untouched.
+                return action_error(format!("ACTIVITY_JOURNAL_FAILED: {error}"));
+            }
+            Some(pending_id)
+        } else {
+            None
+        };
+
+        let mut result = match action {
+            Action::Move { destination } => self.execute_move(&current_file, destination).await,
+            Action::Trash => self.execute_trash(&current_file).await,
+            Action::Delete => self.execute_delete(&current_file).await,
+            Action::RunCommand {
+                command,
+                timeout_ms,
+                rerun_always,
+            } => {
+                self.execute_command(&current_file, command, *timeout_ms, *rerun_always, rule_id)
+                    .await
             }
         };
 
-        self.record_undo(file, action, &result);
-        self.record_activity(file, action, rule_id, rule_name, &result);
+        if let Some(activity_id) = pending_activity_id {
+            let completed = self.activity_entry(
+                activity_id,
+                &current_file,
+                action,
+                rule_id,
+                rule_name,
+                &result,
+            );
+            if let Err(error) = self.db.activity().update(&completed) {
+                tracing::error!(
+                    ?activity_id,
+                    "failed to finalize destructive activity: {error}"
+                );
+                result.success = false;
+                result.error = Some(format!("ACTIVITY_FINALIZE_FAILED: {error}"));
+            }
+        } else {
+            let recorded = self.record_activity(&current_file, action, rule_id, rule_name, &result);
+            if recorded && result.error.as_deref() == Some("COMMAND_INTERRUPTED_REVIEW_REQUIRED") {
+                if let (Some(rule_id), Action::RunCommand { command, .. }) = (rule_id, action) {
+                    if let Err(error) = self.db.command_ledger().mark_interrupted_reported(
+                        rule_id,
+                        &current_file.path,
+                        command,
+                    ) {
+                        tracing::warn!("could not finalize interrupted command review: {error}");
+                    }
+                }
+            }
+        }
         result
     }
 
+    fn revalidate_plan(
+        &self,
+        planned_file: &FileItem,
+        planned_action: &Action,
+        rule_id: Option<Uuid>,
+    ) -> Result<FileItem, String> {
+        let source = validate_source_file(&self.scan_root, Path::new(&planned_file.path))
+            .map_err(|error| error.to_string())?;
+        let source = source.to_str().ok_or("SOURCE_FILE_INVALID")?;
+        let current = FileItem::from_path_sync(source)
+            .map_err(|error| format!("SOURCE_FILE_INVALID: {error}"))?;
+        if !planned_file.is_same_unchanged_file(&current) {
+            return Err("SOURCE_FILE_CHANGED".to_string());
+        }
+
+        let rule_id = rule_id.ok_or("RULE_NOT_FOUND")?;
+        let scan_root_key = crate::paths::safety::canonical_path_key(&self.scan_root);
+        let folder = self
+            .db
+            .folders()
+            .list()
+            .map_err(|error| format!("FOLDER_LOAD_FAILED: {error}"))?
+            .into_iter()
+            .find(|folder| {
+                crate::paths::safety::canonical_path_key(Path::new(&folder.path)) == scan_root_key
+            })
+            .ok_or("FOLDER_NOT_FOUND")?;
+        let rules = self
+            .db
+            .rules()
+            .get_by_ids(&folder.rule_ids)
+            .map_err(|error| format!("RULE_LOAD_FAILED: {error}"))?;
+        let winning = compute_organize_plan(vec![current.clone()], rules)
+            .pop()
+            .ok_or("PLAN_NO_LONGER_VALID")?;
+        if winning.rule_id != Some(rule_id) || winning.action.as_ref() != Some(planned_action) {
+            return Err("PLAN_NO_LONGER_VALID".to_string());
+        }
+        Ok(current)
+    }
+
     async fn execute_move(&self, file: &FileItem, destination: &str) -> ActionResult {
-        let dest_dir = match resolve_destination(destination, file) {
-            Ok(p) => p,
-            Err(e) => {
-                return ActionResult {
-                    success: false,
-                    skipped: false,
-                    new_path: None,
-                    error: Some(format!("INVALID_DESTINATION_TOKEN: {e}")),
-                }
-            }
+        let source = match validate_source_file(&self.scan_root, Path::new(&file.path)) {
+            Ok(path) => path,
+            Err(error) => return action_error(error.to_string()),
+        };
+        let scan_root = match validate_scan_root(&self.scan_root) {
+            Ok(path) => path,
+            Err(error) => return action_error(error.to_string()),
+        };
+        let mut destination_directory = match resolve_destination_from_file(destination, file).await
+        {
+            Ok(path) => path,
+            Err(error) => return action_error(error),
         };
 
-        // Safety: destination must be outside the watched root, otherwise
-        // the moved file would re-trigger rules in auto mode.
-        if dest_dir.starts_with(&self.scan_root) {
-            return ActionResult {
-                success: false,
-                skipped: false,
-                new_path: None,
-                error: Some("INVALID_DESTINATION".into()),
-            };
+        if self.preserve_relative_structure {
+            if let Some(relative_parent) = source
+                .parent()
+                .and_then(|parent| parent.strip_prefix(&scan_root).ok())
+                .filter(|relative| !relative.as_os_str().is_empty())
+            {
+                destination_directory.push(relative_parent);
+            }
         }
 
-        // Create destination if missing.
-        if let Err(e) = tokio::fs::create_dir_all(&dest_dir).await {
-            return ActionResult {
-                success: false,
-                skipped: false,
-                new_path: None,
-                error: Some(e.to_string()),
+        let destination_directory =
+            match validate_destination_directory(&scan_root, &destination_directory) {
+                Ok(path) => path,
+                Err(error) => return action_error(error.to_string()),
             };
+        if let Err(error) = self.validate_against_all_watched_folders(&destination_directory) {
+            return action_error(error);
+        }
+        if let Err(error) = tokio::fs::create_dir_all(&destination_directory).await {
+            return action_error(format!("DESTINATION_CREATE_FAILED: {error}"));
+        }
+        // Resolve again after creation to close the gap between checking a
+        // missing path and using it (including directory symlink redirects).
+        let destination_directory =
+            match validate_destination_directory(&scan_root, &destination_directory) {
+                Ok(path) => path,
+                Err(error) => return action_error(error.to_string()),
+            };
+        if let Err(error) = self.validate_against_all_watched_folders(&destination_directory) {
+            return action_error(error);
+        }
+        let Some(file_name) = source.file_name() else {
+            return action_error("SOURCE_FILE_INVALID".into());
+        };
+        let requested_path = destination_directory.join(file_name);
+        if requested_path == source {
+            return action_error("SOURCE_EQUALS_DESTINATION".into());
         }
 
-        let requested_path = dest_dir.join(&file.name);
-        if matches!(self.conflict_behavior, ConflictBehavior::Skip) && requested_path.exists() {
-            return ActionResult {
-                success: true,
-                skipped: true,
-                new_path: None,
-                error: None,
-            };
-        }
+        // Two watched folders can target the same destination concurrently.
+        // Serialize selection+journaling+move for that requested path so
+        // Rename mode can observe the first result and choose the next suffix.
+        let destination_lock = DESTINATION_LOCKS.for_key(
+            crate::paths::safety::canonical_path_key(&requested_path),
+        );
+        let _destination_guard = destination_lock.lock().await;
 
-        let dest_path = self.resolve_conflict(&requested_path).await;
-        match tokio::fs::rename(&file.path, &dest_path).await {
-            Ok(_) => ActionResult {
-                success: true,
-                skipped: false,
-                new_path: Some(dest_path),
-                error: None,
-            },
-            Err(e) => ActionResult {
-                success: false,
-                skipped: false,
-                new_path: None,
-                error: Some(e.to_string()),
-            },
+        let conflict_behavior = self.conflict_behavior;
+        let expected = file.clone();
+        let prepared = match tokio::task::spawn_blocking(move || {
+            revalidate_immediately_before_action(&expected, &source)?;
+            prepare_move(&source, &requested_path, conflict_behavior)
+        })
+        .await
+        {
+            Ok(Ok(PrepareMoveOutcome::Ready(prepared))) => prepared,
+            Ok(Ok(PrepareMoveOutcome::Skipped)) => {
+                return ActionResult {
+                    success: true,
+                    skipped: true,
+                    new_path: None,
+                    error: None,
+                    command_execution: None,
+                };
+            }
+            Ok(Err(error)) => return action_error(error.to_string()),
+            Err(error) => return action_error(format!("MOVE_PREPARE_TASK_FAILED: {error}")),
+        };
+        let journal = match self.db.undo().prepare_move(
+            self.session_id,
+            prepared.source(),
+            prepared.destination(),
+            prepared.behavior(),
+            prepared.overwrite_backup(),
+            prepared.had_destination(),
+        ) {
+            Ok(entry) => entry,
+            Err(error) => return action_error(format!("UNDO_JOURNAL_PREPARE_FAILED: {error}")),
+        };
+        let cancellation = self.cancellation.clone();
+        let moved = tokio::task::spawn_blocking(move || {
+            execute_prepared_move_cancellable(prepared, cancellation)
+        })
+        .await;
+        match moved {
+            Ok(Ok(MoveOutcome::Moved(destination))) => {
+                if let Err(error) = self.db.undo().mark_applied(&journal) {
+                    // The durable pending row already contains the full
+                    // recovery plan. Reconciliation can promote it from the
+                    // observed filesystem state, now or after a restart.
+                    tracing::error!(
+                        session_id = ?self.session_id,
+                        "could not finalize undo journal after move: {error}"
+                    );
+                    if let Err(reconcile_error) = self.db.undo().reconcile() {
+                        tracing::error!(
+                            session_id = ?self.session_id,
+                            "undo journal reconciliation deferred: {reconcile_error}"
+                        );
+                    }
+                }
+                ActionResult {
+                    success: true,
+                    skipped: false,
+                    new_path: Some(destination),
+                    error: None,
+                    command_execution: None,
+                }
+            }
+            Ok(Ok(MoveOutcome::Skipped)) => {
+                if let Err(error) = self.db.undo().delete_entry(&journal) {
+                    tracing::warn!("could not discard skipped move journal: {error}");
+                }
+                ActionResult {
+                    success: true,
+                    skipped: true,
+                    new_path: None,
+                    error: None,
+                    command_execution: None,
+                }
+            }
+            Ok(Err(error)) => {
+                let requires_recovery = error.to_string().contains("DESTINATION_RESTORE_FAILED");
+                let cleanup = if requires_recovery {
+                    self.db.undo().reconcile()
+                } else {
+                    self.db.undo().delete_entry(&journal)
+                };
+                if let Err(cleanup_error) = cleanup {
+                    tracing::warn!("could not reconcile failed move journal: {cleanup_error}");
+                }
+                action_error(error.to_string())
+            }
+            Err(error) => {
+                if let Err(reconcile_error) = self.db.undo().reconcile() {
+                    tracing::warn!("could not reconcile interrupted move: {reconcile_error}");
+                }
+                action_error(format!("MOVE_TASK_FAILED: {error}"))
+            }
         }
     }
 
     async fn execute_trash(&self, file: &FileItem) -> ActionResult {
-        // Tauri exposes trash via the shell plugin; we delegate to it.
-        // For now, this is a stub that returns an error.
-        // TODO: wire up tauri_plugin_shell::trash
-        let _ = file;
-        ActionResult {
-            success: false,
-            skipped: false,
-            new_path: None,
-            error: Some("TRASH_NOT_IMPLEMENTED".into()),
-        }
-    }
-
-    async fn execute_delete(&self, file: &FileItem) -> ActionResult {
-        // Safety: only allow deleting files inside the watched root.
-        let file_path = Path::new(&file.path);
-        if !file_path.starts_with(&self.scan_root) {
-            return ActionResult {
-                success: false,
-                skipped: false,
-                new_path: None,
-                error: Some("WATCHED_FOLDER_PROTECTED".into()),
-            };
-        }
-        match tokio::fs::remove_file(file_path).await {
-            Ok(_) => ActionResult {
+        let path = match validate_source_file(&self.scan_root, Path::new(&file.path)) {
+            Ok(path) => path,
+            Err(error) => return action_error(error.to_string()),
+        };
+        let expected = file.clone();
+        match tokio::task::spawn_blocking(move || {
+            revalidate_immediately_before_action(&expected, &path)?;
+            trash_file(&path)
+        })
+        .await
+        {
+            Ok(Ok(())) => ActionResult {
                 success: true,
                 skipped: false,
                 new_path: None,
                 error: None,
+                command_execution: None,
             },
-            Err(e) => ActionResult {
-                success: false,
-                skipped: false,
-                new_path: None,
-                error: Some(e.to_string()),
-            },
+            Ok(Err(error)) => action_error(error.to_string()),
+            Err(error) => action_error(format!("TRASH_TASK_FAILED: {error}")),
         }
     }
 
-    /// If a file already exists at `dest`, apply `conflict_behavior`:
-    /// `Rename` → append ` (1)`, ` (2)`, …; `Overwrite` → leave as-is;
-    /// `Skip` → return a sentinel that the caller checks.
-    async fn resolve_conflict(&self, dest: &Path) -> PathBuf {
-        if !dest.exists() {
-            return dest.to_path_buf();
+    fn validate_against_all_watched_folders(&self, destination: &Path) -> Result<(), String> {
+        let folders = self
+            .db
+            .folders()
+            .list()
+            .map_err(|error| format!("FOLDER_LOAD_FAILED: {error}"))?;
+        validate_destination_outside_watched_folders(
+            destination,
+            folders.iter().map(|folder| Path::new(&folder.path)),
+        )
+        .map_err(|error| error.to_string())
+    }
+
+    async fn execute_delete(&self, file: &FileItem) -> ActionResult {
+        let path = match validate_source_file(&self.scan_root, Path::new(&file.path)) {
+            Ok(path) => path,
+            Err(error) => return action_error(error.to_string()),
+        };
+        let expected = file.clone();
+        match tokio::task::spawn_blocking(move || {
+            revalidate_immediately_before_action(&expected, &path)?;
+            std::fs::remove_file(path).map_err(anyhow::Error::from)
+        })
+        .await
+        {
+            Ok(Ok(())) => ActionResult {
+                success: true,
+                skipped: false,
+                new_path: None,
+                error: None,
+                command_execution: None,
+            },
+            Ok(Err(error)) if error.to_string().starts_with("SOURCE_FILE_CHANGED") => {
+                action_error(error.to_string())
+            }
+            Ok(Err(error)) => action_error(format!("DELETE_FAILED: {error}")),
+            Err(error) => action_error(format!("DELETE_TASK_FAILED: {error}")),
         }
-        match self.conflict_behavior {
-            ConflictBehavior::Overwrite => dest.to_path_buf(),
-            ConflictBehavior::Skip => dest.to_path_buf(),
-            ConflictBehavior::Rename => {
-                let parent = dest.parent().unwrap_or_else(|| Path::new("."));
-                let stem = dest.file_stem().and_then(|s| s.to_str()).unwrap_or("file");
-                let ext = dest.extension().and_then(|s| s.to_str());
-                for n in 1u32..=1_000_000 {
-                    let candidate_name = match ext {
-                        Some(e) => format!("{} ({}).{}", stem, n, e),
-                        None => format!("{} ({})", stem, n),
-                    };
-                    let candidate = parent.join(&candidate_name);
-                    if !candidate.exists() {
-                        return candidate;
-                    }
-                }
-                dest.to_path_buf()
+    }
+
+    async fn execute_command(
+        &self,
+        file: &FileItem,
+        command: &str,
+        timeout_ms: u32,
+        rerun_always: bool,
+        rule_id: Option<Uuid>,
+    ) -> ActionResult {
+        let source = match validate_source_file(&self.scan_root, Path::new(&file.path)) {
+            Ok(path) => path,
+            Err(error) => return action_error(error.to_string()),
+        };
+        let Some(rule_id) = rule_id else {
+            return action_error("RULE_NOT_FOUND".to_string());
+        };
+        let Some(source_path) = source.to_str() else {
+            return action_error("SOURCE_FILE_INVALID".to_string());
+        };
+        // Refresh metadata immediately before claiming the fingerprint so a
+        // file changed between scan and execution is never mistaken for an
+        // older version.
+        let current_file = match FileItem::from_path_sync(source_path) {
+            Ok(file) => file,
+            Err(error) => return action_error(format!("SOURCE_FILE_INVALID: {error}")),
+        };
+        if !file.is_same_unchanged_file(&current_file) {
+            return action_error("SOURCE_FILE_CHANGED".to_string());
+        }
+        let claim = match self.db.command_ledger().try_begin(
+            rule_id,
+            &current_file.path,
+            command,
+            current_file.size,
+            current_file.modified_at,
+            rerun_always,
+        ) {
+            Ok(claim) => claim,
+            Err(error) => return action_error(format!("COMMAND_LEDGER_FAILED: {error}")),
+        };
+        match claim {
+            CommandClaim::Claimed => {}
+            CommandClaim::AlreadyCompleted
+            | CommandClaim::InProgress
+            | CommandClaim::InterruptedAwaitingReview => {
+                return ActionResult {
+                    success: true,
+                    skipped: true,
+                    new_path: None,
+                    error: None,
+                    command_execution: None,
+                };
+            }
+            CommandClaim::InterruptedNeedsReview => {
+                return action_error("COMMAND_INTERRUPTED_REVIEW_REQUIRED".to_string());
             }
         }
+
+        let execution = execute_shell_command_cancellable(
+            command,
+            &current_file,
+            timeout_ms,
+            self.cancellation.clone(),
+        )
+        .await;
+        let latest_file = FileItem::from_path_sync(&current_file.path).unwrap_or(current_file);
+        let ledger_error = if execution.cancelled {
+            self.db
+                .command_ledger()
+                .abort(rule_id, &latest_file.path, command)
+                .err()
+        } else {
+            self.db
+                .command_ledger()
+                .finish(
+                    rule_id,
+                    &latest_file.path,
+                    command,
+                    latest_file.size,
+                    latest_file.modified_at,
+                )
+                .err()
+        };
+        let mut result = ActionResult {
+            success: execution.success,
+            skipped: false,
+            new_path: None,
+            error: execution.error.clone(),
+            command_execution: Some(execution),
+        };
+        if let Some(error) = ledger_error {
+            result.success = false;
+            result.error = Some(format!("COMMAND_LEDGER_FAILED: {error}"));
+        }
+        result
     }
 
     fn record_activity(
@@ -214,9 +505,33 @@ impl<'a> Organizer<'a> {
         rule_id: Option<Uuid>,
         rule_name: Option<&str>,
         result: &ActionResult,
-    ) {
-        let entry = ActivityEntry {
-            id: Uuid::new_v4(),
+    ) -> bool {
+        // A command fingerprint skip is expected bookkeeping, not a new
+        // activity. Omitting it avoids flooding History on watcher catch-up.
+        if matches!(action, Action::RunCommand { .. }) && result.skipped {
+            return true;
+        }
+        let entry = self.activity_entry(Uuid::new_v4(), file, action, rule_id, rule_name, result);
+        if let Err(error) = self.db.activity().insert(&entry) {
+            tracing::warn!("failed to record activity: {error}");
+            false
+        } else {
+            true
+        }
+    }
+
+    fn activity_entry(
+        &self,
+        id: Uuid,
+        file: &FileItem,
+        action: &Action,
+        rule_id: Option<Uuid>,
+        rule_name: Option<&str>,
+        result: &ActionResult,
+    ) -> ActivityEntry {
+        let command_execution = result.command_execution.as_ref();
+        ActivityEntry {
+            id,
             at: Utc::now(),
             r#type: match action {
                 Action::Move { .. } => ActivityType::Move,
@@ -226,43 +541,139 @@ impl<'a> Organizer<'a> {
             },
             file_name: file.name.clone(),
             file_path: file.path.clone(),
-            folder_id: None, // filled by caller
+            folder_id: self
+                .scan_root
+                .to_str()
+                .and_then(|path| self.db.folders().get_by_path(path).ok().flatten())
+                .map(|folder| folder.id),
             rule_id,
-            rule_name: rule_name.map(|s| s.to_string()),
+            rule_name: rule_name.map(str::to_string),
             destination: result
                 .new_path
                 .as_ref()
-                .and_then(|p| p.to_str())
-                .map(|s| s.to_string()),
-            command: None,
-            exit_code: None,
-            output: None,
-            duration_ms: None,
-            timed_out: None,
+                .and_then(|path| path.to_str())
+                .map(str::to_string),
+            command: command_execution
+                .map(|execution| execution.command.clone())
+                .or_else(|| match action {
+                    Action::RunCommand { command, .. } => Some(command.clone()),
+                    _ => None,
+                }),
+            exit_code: command_execution.and_then(|execution| execution.exit_code),
+            output: command_execution.map(|execution| execution.output.clone()),
+            duration_ms: command_execution.map(|execution| execution.duration_ms),
+            timed_out: command_execution.map(|execution| execution.timed_out),
             success: result.success,
             error: result.error.clone(),
-        };
-        if let Err(e) = self.db.activity().insert(&entry) {
-            tracing::warn!("failed to record activity: {e}");
         }
     }
+}
 
-    fn record_undo(&self, file: &FileItem, action: &Action, result: &ActionResult) {
-        if !matches!(action, Action::Move { .. }) || !result.success || result.skipped {
-            return;
-        }
-        let Some(new_path) = result.new_path.as_ref().and_then(|path| path.to_str()) else {
-            return;
+fn action_error(error: String) -> ActionResult {
+    ActionResult {
+        success: false,
+        skipped: false,
+        new_path: None,
+        error: Some(error),
+        command_execution: None,
+    }
+}
+
+fn revalidate_immediately_before_action(expected: &FileItem, path: &Path) -> anyhow::Result<()> {
+    let current = FileItem::from_path_sync(path.to_string_lossy().as_ref())
+        .map_err(|error| anyhow::anyhow!("SOURCE_FILE_INVALID: {error}"))?;
+    if !expected.is_same_unchanged_file(&current) {
+        anyhow::bail!("SOURCE_FILE_CHANGED");
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::storage::activity::ActivityFilters;
+    use std::fs;
+
+    #[tokio::test]
+    async fn move_records_activity_and_a_reversible_undo_entry() {
+        let temporary = tempfile::tempdir().unwrap();
+        let watched = temporary.path().join("watched");
+        let destination = temporary.path().join("organized");
+        fs::create_dir(&watched).unwrap();
+        let source = watched.join("report.txt");
+        fs::write(&source, b"report").unwrap();
+
+        let database_path = temporary.path().join("app.db");
+        let database = Database::open(&database_path).unwrap();
+        database.run_migrations().unwrap();
+        let session_id = Uuid::new_v4();
+        let file = FileItem::from_path_sync(source.to_string_lossy().as_ref()).unwrap();
+        let action = Action::Move {
+            destination: destination.to_string_lossy().into_owned(),
+        };
+        let rule_id = Uuid::new_v4();
+        database
+            .rules()
+            .insert(&crate::domain::Rule {
+                id: rule_id,
+                name: "Documents".into(),
+                is_quick_rule: false,
+                enabled: true,
+                order: 0,
+                icon: "File".into(),
+                conditions: vec![crate::domain::Condition::Extension {
+                    value: vec![".txt".into()],
+                }],
+                action: action.clone(),
+                created_at: Utc::now(),
+            })
+            .unwrap();
+        database
+            .folders()
+            .insert(&crate::domain::Folder {
+                id: Uuid::new_v4(),
+                path: watched.to_string_lossy().into_owned(),
+                name: "Watched".into(),
+                mode: crate::domain::FolderMode::Single,
+                rule_ids: vec![rule_id],
+                watcher_status: crate::domain::WatcherStatus::Stopped,
+                created_at: Utc::now(),
+                subfolders: crate::domain::SubfolderConfig::default(),
+                schedule: None,
+                exclude_folders: Vec::new(),
+                exclude_patterns: Vec::new(),
+            })
+            .unwrap();
+        let organizer = Organizer {
+            db: &database,
+            session_id,
+            scan_root: watched,
+            conflict_behavior: ConflictBehavior::Rename,
+            preserve_relative_structure: false,
+            cancellation: None,
         };
 
-        let entry = UndoEntry {
-            session_id: self.session_id,
-            at: Utc::now(),
-            from_path: file.path.clone(),
-            to_path: new_path.to_string(),
-        };
-        if let Err(error) = self.db.undo().append(&entry) {
-            tracing::warn!("failed to record undo entry: {error}");
-        }
+        let result = organizer
+            .execute(&file, &action, Some(rule_id), Some("Documents"))
+            .await;
+
+        assert!(result.success, "{:?}", result.error);
+        assert!(!source.exists());
+        assert!(destination.join("report.txt").exists());
+        let undo_entries = database.undo().read_reverse(session_id).unwrap();
+        assert_eq!(undo_entries.len(), 1);
+        assert_eq!(undo_entries[0].from_path, file.path);
+        assert_eq!(
+            undo_entries[0].to_path,
+            destination.join("report.txt").to_string_lossy()
+        );
+
+        let (activity, total) = database
+            .activity()
+            .list(&ActivityFilters::default(), 10, 0)
+            .unwrap();
+        assert_eq!(total, 1);
+        assert_eq!(activity[0].r#type, ActivityType::Move);
+        assert!(activity[0].success);
     }
 }

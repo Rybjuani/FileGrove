@@ -15,6 +15,11 @@ import type {
   OrganizeStarted,
   OrganizeProgress,
   OrganizeDone,
+  ActivityFilters,
+  SubfolderConfig,
+  CommandTestResult,
+  PreviewResult,
+  UndoSessionSummary,
 } from './types';
 
 export const ipc = {
@@ -25,14 +30,16 @@ export const ipc = {
         { folderPath },
       ),
     scanRecursive: (folderPath: string) => invoke<IpcResponse>('scan_recursive', { folderPath }),
-    preview: (folderPath: string) => invoke<IpcResponse>('preview', { folderPath }),
+    preview: (folderPath: string) => invoke<IpcResponse<PreviewResult>>('preview', { folderPath }),
     previewRecursive: (folderPath: string) =>
-      invoke<IpcResponse>('preview_recursive', { folderPath }),
+      invoke<IpcResponse<PreviewResult>>('preview_recursive', { folderPath }),
     organize: (folderPath: string) =>
       invoke<IpcResponse<OrganizeResult>>('organize', { folderPath }),
     organizeRecursive: (folderPath: string, opts?: Record<string, unknown>) =>
       invoke<IpcResponse<OrganizeResult>>('organize_recursive', { folderPath, opts }),
     cancelOrganize: (sessionId: string) => invoke<IpcResponse>('cancel', { sessionId }),
+    latestUndoSession: (folderId: string) =>
+      invoke<IpcResponse<UndoSessionSummary | null>>('latest_undo_session', { folderId }),
     undoOrganize: (sessionId: string) =>
       invoke<IpcResponse<{ done: number; failed: number; total: number }>>('undo', { sessionId }),
     dismissUndo: (sessionId: string) => invoke<IpcResponse>('dismiss_undo', { sessionId }),
@@ -42,6 +49,12 @@ export const ipc = {
       listen('organize:progress', (e) => cb(e.payload as OrganizeProgress)),
     onDone: (cb: (data: OrganizeDone) => void): Promise<UnlistenFn> =>
       listen('organize:done', (e) => cb(e.payload as OrganizeDone)),
+    onBackgroundError: (
+      cb: (data: { folderPath: string; trigger: string; error: string }) => void,
+    ): Promise<UnlistenFn> =>
+      listen('background:error', (e) =>
+        cb(e.payload as { folderPath: string; trigger: string; error: string }),
+      ),
   },
 
   folders: {
@@ -50,14 +63,34 @@ export const ipc = {
     remove: (id: string) => invoke<IpcResponse>('remove', { id }),
     updateName: (id: string, name: string) =>
       invoke<IpcResponse<Folder>>('update_name', { id, name }),
-    updateMode: (id: string, mode: string) =>
-      invoke<IpcResponse<Folder>>('update_mode', { id, mode }),
+    updateMode: (id: string, mode: string, disableSubfolders = false) =>
+      invoke<IpcResponse<Folder>>('update_mode', { id, mode, disableSubfolders }),
     assignRules: (folderId: string, ruleIds: string[]) =>
       invoke<IpcResponse<Folder>>('assign_rules', { folderId, ruleIds }),
     unassignRules: (folderId: string, ruleIds: string[]) =>
       invoke<IpcResponse<Folder>>('unassign_rules', { folderId, ruleIds }),
-    updateSubfoldersConfig: (id: string, config: unknown) =>
+    updateSubfoldersConfig: (id: string, config: SubfolderConfig) =>
       invoke<IpcResponse<Folder>>('update_subfolders_config', { id, config }),
+    updateExclusions: (id: string, excludeFolders: string[], excludePatterns: string[]) =>
+      invoke<IpcResponse<Folder>>('update_exclusions', {
+        id,
+        excludeFolders,
+        excludePatterns,
+      }),
+    updateConfiguration: (
+      id: string,
+      config: SubfolderConfig,
+      excludeFolders: string[],
+      excludePatterns: string[],
+      ruleIds: string[],
+    ) =>
+      invoke<IpcResponse<Folder>>('update_configuration', {
+        id,
+        config,
+        excludeFolders,
+        excludePatterns,
+        ruleIds,
+      }),
     updateSchedule: (id: string, schedule: unknown) =>
       invoke<IpcResponse<Folder>>('update_schedule', { id, schedule }),
     getNextRun: (id: string) =>
@@ -74,6 +107,11 @@ export const ipc = {
       invoke<IpcResponse<Rule>>('update', { id, updates }),
     delete: (id: string) => invoke<IpcResponse>('delete_rule', { id }),
     toggle: (id: string) => invoke<IpcResponse<{ enabled: boolean }>>('toggle', { id }),
+    reorder: (ids: string[]) => invoke<IpcResponse>('reorder_rules', { ids }),
+    testCommand: (command: string, timeoutMs: number) =>
+      invoke<IpcResponse<CommandTestResult>>('test_command', { command, timeoutMs }),
+    allowInterruptedRetry: (ruleId: string, filePath: string, command: string) =>
+      invoke<IpcResponse>('allow_interrupted_retry', { ruleId, filePath, command }),
   },
 
   watcher: {
@@ -93,16 +131,11 @@ export const ipc = {
   },
 
   activity: {
-    list: (opts: {
-      limit?: number;
-      offset?: number;
-      folderId?: string;
-      ruleId?: string;
-      success?: boolean;
-      type?: string;
-    }) => invoke<IpcResponse<{ items: ActivityEntry[]; total: number }>>('list_activity', { opts }),
+    list: (opts: ActivityFilters) =>
+      invoke<IpcResponse<{ items: ActivityEntry[]; total: number }>>('list_activity', { opts }),
     delete: (ids: string[]) => invoke<IpcResponse>('delete_activity', { ids }),
     clear: () => invoke<IpcResponse>('clear'),
+    onChanged: (cb: () => void): Promise<UnlistenFn> => listen('activity:changed', cb),
   },
 
   permissions: {

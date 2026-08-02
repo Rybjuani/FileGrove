@@ -90,8 +90,45 @@ impl RuleRepo {
     }
 
     pub fn delete(&self, id: Uuid) -> Result<()> {
-        let conn = self.conn.lock();
-        conn.execute("DELETE FROM rules WHERE id = ?", [id.to_string()])?;
+        let mut conn = self.conn.lock();
+        let transaction = conn.transaction()?;
+        let id_string = id.to_string();
+        let exists: bool = transaction.query_row(
+            "SELECT EXISTS(SELECT 1 FROM rules WHERE id = ?)",
+            [&id_string],
+            |row| row.get(0),
+        )?;
+        if !exists {
+            anyhow::bail!("RULE_NOT_FOUND");
+        }
+
+        // Folder assignments live in JSON arrays rather than a relation, so
+        // clean them in the same transaction as the rule deletion.
+        let folder_updates: Vec<(String, String)> = {
+            let mut statement = transaction.prepare("SELECT id, rule_ids FROM folders")?;
+            let rows = statement.query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })?;
+            let mut updates = Vec::new();
+            for row in rows {
+                let (folder_id, serialized) = row?;
+                let mut rule_ids: Vec<Uuid> = serde_json::from_str(&serialized).unwrap_or_default();
+                let previous_len = rule_ids.len();
+                rule_ids.retain(|rule_id| *rule_id != id);
+                if rule_ids.len() != previous_len {
+                    updates.push((folder_id, serde_json::to_string(&rule_ids)?));
+                }
+            }
+            updates
+        };
+        for (folder_id, serialized) in folder_updates {
+            transaction.execute(
+                "UPDATE folders SET rule_ids = ?1 WHERE id = ?2",
+                rusqlite::params![serialized, folder_id],
+            )?;
+        }
+        transaction.execute("DELETE FROM rules WHERE id = ?", [&id_string])?;
+        transaction.commit()?;
         Ok(())
     }
 
@@ -111,6 +148,38 @@ impl RuleRepo {
         };
         Ok(new_value)
     }
+
+    /// Reorder the complete rule list atomically so a partial database error
+    /// can never change which destructive rule wins for a file.
+    pub fn reorder(&self, ids: &[Uuid]) -> Result<()> {
+        if ids.is_empty() {
+            return Ok(());
+        }
+        let mut unique = std::collections::HashSet::with_capacity(ids.len());
+        if ids.iter().any(|id| !unique.insert(*id)) {
+            anyhow::bail!("INVALID_RULE_ORDER");
+        }
+
+        let mut conn = self.conn.lock();
+        let transaction = conn.transaction()?;
+        let total: usize = transaction.query_row("SELECT COUNT(*) FROM rules", [], |row| {
+            row.get::<_, i64>(0).map(|value| value as usize)
+        })?;
+        if total != ids.len() {
+            anyhow::bail!("RULE_SET_CHANGED");
+        }
+        for (order, id) in ids.iter().enumerate() {
+            let changed = transaction.execute(
+                "UPDATE rules SET \"order\" = ?2 WHERE id = ?1",
+                rusqlite::params![id.to_string(), i32::try_from(order)?],
+            )?;
+            if changed != 1 {
+                anyhow::bail!("RULE_NOT_FOUND");
+            }
+        }
+        transaction.commit()?;
+        Ok(())
+    }
 }
 
 fn row_to_rule(row: &rusqlite::Row<'_>) -> rusqlite::Result<Rule> {
@@ -127,8 +196,15 @@ fn row_to_rule(row: &rusqlite::Row<'_>) -> rusqlite::Result<Rule> {
     let id = Uuid::parse_str(&id_str).map_err(|e| {
         rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e))
     })?;
-    let conditions: Vec<Condition> = serde_json::from_str(&conditions_str).unwrap_or_default();
-    let action: Action = serde_json::from_str(&action_str).unwrap_or(Action::Trash);
+    let conditions: Vec<Condition> = serde_json::from_str(&conditions_str).map_err(|error| {
+        rusqlite::Error::FromSqlConversionFailure(6, rusqlite::types::Type::Text, Box::new(error))
+    })?;
+    // Never substitute a destructive action for corrupt persisted data. A
+    // malformed action must make the row unreadable so the engine cannot run
+    // it until it has been deliberately repaired.
+    let action: Action = serde_json::from_str(&action_str).map_err(|error| {
+        rusqlite::Error::FromSqlConversionFailure(7, rusqlite::types::Type::Text, Box::new(error))
+    })?;
     let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
         .map(|d| d.with_timezone(&chrono::Utc))
         .unwrap_or_else(|_| chrono::Utc::now());

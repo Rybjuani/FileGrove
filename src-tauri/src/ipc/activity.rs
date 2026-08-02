@@ -1,5 +1,5 @@
 use serde_json::{json, Value};
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
 use uuid::Uuid;
 
 use crate::domain::activity::ActivityType;
@@ -11,8 +11,16 @@ pub async fn list_activity(
     state: State<'_, AppState>,
     opts: serde_json::Value,
 ) -> Result<Value, String> {
-    let limit = opts.get("limit").and_then(|v| v.as_u64()).unwrap_or(50) as u32;
-    let offset = opts.get("offset").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+    let limit = opts
+        .get("limit")
+        .and_then(|value| value.as_u64())
+        .unwrap_or(50)
+        .clamp(1, 200) as u32;
+    let offset = opts
+        .get("offset")
+        .and_then(|value| value.as_u64())
+        .unwrap_or(0)
+        .min(u32::MAX as u64) as u32;
     let filters = ActivityFilters {
         folder_id: opts
             .get("folderId")
@@ -54,17 +62,27 @@ pub async fn list_activity(
 }
 
 #[tauri::command]
-pub async fn delete_activity(state: State<'_, AppState>, ids: Vec<Uuid>) -> Result<Value, String> {
+pub async fn delete_activity(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    ids: Vec<Uuid>,
+) -> Result<Value, String> {
     match state.db.activity().delete(&ids) {
-        Ok(()) => Ok(json!({ "success": true })),
+        Ok(()) => {
+            let _ = app.emit("activity:changed", json!({ "kind": "delete", "ids": ids }));
+            Ok(json!({ "success": true }))
+        }
         Err(e) => Ok(json!({ "success": false, "error": e.to_string() })),
     }
 }
 
 #[tauri::command]
-pub async fn clear(state: State<'_, AppState>) -> Result<Value, String> {
+pub async fn clear(app: AppHandle, state: State<'_, AppState>) -> Result<Value, String> {
     match state.db.activity().clear() {
-        Ok(()) => Ok(json!({ "success": true })),
+        Ok(()) => {
+            let _ = app.emit("activity:changed", json!({ "kind": "clear" }));
+            Ok(json!({ "success": true }))
+        }
         Err(e) => Ok(json!({ "success": false, "error": e.to_string() })),
     }
 }

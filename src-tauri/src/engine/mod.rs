@@ -3,7 +3,11 @@
 //! See `docs/SPEC.md` §5 for the formal semantics this module implements.
 
 pub mod cancellation;
+pub mod command;
 #[cfg(not(test))]
 pub mod executor;
+pub mod file_ops;
+pub mod keyed_lock;
 pub mod matcher;
 pub mod planner;
+pub mod scanner;

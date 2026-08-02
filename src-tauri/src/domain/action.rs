@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// What to do with a file when its rule matches.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum Action {
     /// Move file to `destination` (a path that may contain tokens like `{year}`).

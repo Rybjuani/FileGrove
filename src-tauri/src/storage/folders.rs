@@ -110,6 +110,15 @@ impl FolderRepo {
         Ok(())
     }
 
+    pub fn update_status(&self, id: Uuid, status: WatcherStatus) -> Result<()> {
+        let conn = self.conn.lock();
+        conn.execute(
+            "UPDATE folders SET watcher_status = ?2 WHERE id = ?1",
+            rusqlite::params![id.to_string(), status.as_str()],
+        )?;
+        Ok(())
+    }
+
     pub fn delete(&self, id: Uuid) -> Result<()> {
         let conn = self.conn.lock();
         conn.execute("DELETE FROM folders WHERE id = ?", [id.to_string()])?;
