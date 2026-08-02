@@ -117,7 +117,7 @@
     "subfoldersRequireManualMode": "Recursive scan requires manual mode",
     "tooManyExclusions": "Use no more than 100 exclusions.",
     "tooManyRules": "Assign no more than 100 rules to one folder.",
-    "trashFailed": "The file could not be sent to the Recycle Bin.",
+    "trashFailed": "The file could not be sent to the system trash.",
     "undoAlreadyRunning": "This operation is already being undone.",
     "undoFailed": "The operation could not be undone.",
     "undoBackupMissing": "The file preserved before an overwrite is missing. No further recovery was attempted.",
@@ -131,7 +131,7 @@
     "userCanceledFolderSelect": "Folder selection was canceled",
     "watchedFolderInvalid": "Watched folder no longer exists",
     "watchedFolderOverlap": "This folder overlaps another watched folder. Remove the parent or nested folder first.",
-    "watchedFolderProtected": "Cannot delete a file outside the watched folder",
+    "watchedFolderProtected": "This protected system location cannot be used as a watched folder.",
     "watcherNotRunning": "Folder watching is not currently running.",
     "watcherRequiresAutoMode": "Folder watching is available only in automatic mode."
   },
@@ -159,11 +159,19 @@
       "autoDisablesRecursiveConfirm": "Automatic mode watches only the folder root. Disable recursive scanning and switch to automatic mode?",
       "dangerousAssignmentConfirm": "Assign {{count}} potentially destructive rule(s) to this automatic or scheduled folder?",
       "dangerousRuleWarning": "Permanent deletion and command rules can change files without an undo. Preview their impact before enabling automation.",
+      "destinationMode": "Subfolder destination layout",
+      "excludeFolders": "Excluded folders (one relative path per line)",
+      "excludePatterns": "Excluded filename patterns (one per line)",
       "firstRecursiveRun": "This is the first recursive run for this folder. Review depth, structure and exclusions before continuing. Run now?",
+      "flatten": "Put all files directly in the destination",
+      "maxDepth": "Maximum depth",
       "noEnabledRules": "All available rules are disabled.",
+      "preserve": "Preserve the relative folder structure",
+      "recursive": "Include subfolders in manual and scheduled scans",
       "recursiveAutoDisabled": "Recursive scanning is unavailable in automatic mode.",
       "saved": "Settings saved",
-      "title": "Rules and advanced scanning"
+      "title": "Rules and advanced scanning",
+      "unlimited": "Unlimited"
     },
     "mode": {
       "auto": "Automatic",
@@ -282,7 +290,7 @@
   "rules": {
     "action": {
       "command": "Command",
-      "commandPlaceholder": "e.g. powershell -File process.ps1 {filePath}",
+      "commandPlaceholder": "e.g. /home/you/scripts/process.sh {filePath}",
       "delete": "Delete permanently",
       "deleteConfirm": "I understand these files will be permanently deleted",
       "deleteWarning": "Matching files will be deleted permanently. This cannot be undone.",
@@ -294,7 +302,7 @@
       "runCommand": "Run command",
       "securityWarning": {
         "accept": "I trust this command and accept the risk",
-        "body": "The command runs with your Windows user permissions for each matching file. Only use commands you trust.",
+        "body": "The command runs with your Linux user permissions for each matching file. Only use commands you trust.",
         "title": "Run an external command automatically?"
       },
       "testButton": "Choose a file and test command",
@@ -303,7 +311,7 @@
       "testRunning": "Running test…",
       "timeout": "Timeout (seconds, 1–600)",
       "trash": "Move to trash",
-      "trashHint": "Files go to the Windows Recycle Bin and can be restored manually.",
+      "trashHint": "Files go to the Linux desktop trash and can be restored manually.",
       "variables": "Available file variables"
     },
     "addCondition": "Add condition",
@@ -314,7 +322,7 @@
     "createRuleBtn": "Create rule",
     "deleteConfirm": "Delete rule “{{name}}”?",
     "destination": "Destination folder",
-    "destinationPlaceholder": "e.g. C:\\Users\\you\\Documents\\{year}",
+    "destinationPlaceholder": "e.g. /home/you/Documents/{year}",
     "disable": "Disable",
     "disabled": "Disabled",
     "editRule": "Edit rule",
@@ -376,7 +384,7 @@
       "command": "Enter the command to run.",
       "conditions": "Add at least one condition.",
       "destination": "Choose or enter a destination.",
-      "destinationAbsolute": "Choose a complete destination path, such as C:\\Users\\you\\Documents.",
+      "destinationAbsolute": "Choose a complete destination path, such as /home/you/Documents.",
       "invalidCondition": "Complete every condition with a valid value.",
       "name": "Enter a rule name.",
       "timeout": "Timeout must be between 1 and 600 seconds."

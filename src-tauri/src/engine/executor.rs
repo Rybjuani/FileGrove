@@ -238,9 +238,8 @@ impl<'a> Organizer<'a> {
         // Two watched folders can target the same destination concurrently.
         // Serialize selection+journaling+move for that requested path so
         // Rename mode can observe the first result and choose the next suffix.
-        let destination_lock = DESTINATION_LOCKS.for_key(
-            crate::paths::safety::canonical_path_key(&requested_path),
-        );
+        let destination_lock =
+            DESTINATION_LOCKS.for_key(crate::paths::safety::canonical_path_key(&requested_path));
         let _destination_guard = destination_lock.lock().await;
 
         let conflict_behavior = self.conflict_behavior;

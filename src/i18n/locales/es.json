@@ -159,11 +159,19 @@
       "autoDisablesRecursiveConfirm": "El modo automático solo vigila la raíz de la carpeta. ¿Desactivar el escaneo recursivo y cambiar a modo automático?",
       "dangerousAssignmentConfirm": "¿Asignar {{count}} regla(s) potencialmente destructiva(s) a esta carpeta automática o programada?",
       "dangerousRuleWarning": "Las reglas de eliminación permanente y comandos pueden cambiar archivos sin opción de deshacer. Revisa su impacto antes de automatizarlas.",
+      "destinationMode": "Estructura de subcarpetas en el destino",
+      "excludeFolders": "Carpetas excluidas (una ruta relativa por línea)",
+      "excludePatterns": "Patrones de nombre excluidos (uno por línea)",
       "firstRecursiveRun": "Esta es la primera ejecución recursiva de la carpeta. Revisa profundidad, estructura y exclusiones antes de continuar. ¿Ejecutar ahora?",
+      "flatten": "Colocar todos los archivos directamente en el destino",
+      "maxDepth": "Profundidad máxima",
       "noEnabledRules": "Todas las reglas disponibles están desactivadas.",
+      "preserve": "Conservar la estructura relativa de carpetas",
+      "recursive": "Incluir subcarpetas en escaneos manuales y programados",
       "recursiveAutoDisabled": "El escaneo recursivo no está disponible en modo automático.",
       "saved": "Configuración guardada",
-      "title": "Reglas y escaneo avanzado"
+      "title": "Reglas y escaneo avanzado",
+      "unlimited": "Sin límite"
     },
     "mode": {
       "auto": "Automático",
@@ -282,7 +290,7 @@
   "rules": {
     "action": {
       "command": "Comando",
-      "commandPlaceholder": "p. ej., powershell -File procesar.ps1 {filePath}",
+      "commandPlaceholder": "p. ej., /home/usuario/scripts/procesar.sh {filePath}",
       "delete": "Eliminar permanentemente",
       "deleteConfirm": "Entiendo que los archivos se eliminarán permanentemente",
       "deleteWarning": "Los archivos se eliminarán permanentemente. Esto no se puede deshacer.",
@@ -314,7 +322,7 @@
     "createRuleBtn": "Crear regla",
     "deleteConfirm": "¿Eliminar la regla «{{name}}»?",
     "destination": "Carpeta de destino",
-    "destinationPlaceholder": "p. ej. C:\\Users\\tu_usuario\\Documentos\\{year}",
+    "destinationPlaceholder": "p. ej. /home/usuario/Documentos/{year}",
     "disable": "Desactivar",
     "disabled": "Desactivada",
     "editRule": "Editar regla",
@@ -376,7 +384,7 @@
       "command": "Escribe el comando que se ejecutará.",
       "conditions": "Añade al menos una condición.",
       "destination": "Selecciona o escribe un destino.",
-      "destinationAbsolute": "Selecciona una ruta de destino completa, como C:\\Users\\tu_usuario\\Documentos.",
+      "destinationAbsolute": "Selecciona una ruta de destino completa, como /home/usuario/Documentos.",
       "invalidCondition": "Completa cada condición con un valor válido.",
       "name": "Escribe un nombre para la regla.",
       "timeout": "El tiempo máximo debe estar entre 1 y 600 segundos."

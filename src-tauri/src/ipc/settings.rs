@@ -42,7 +42,7 @@ pub async fn set(
         }
     }
     match state.db.settings().set_many(&settings) {
-        Ok(()) => Ok(json!({ "success": true })),
+        Ok(_) => Ok(json!({ "success": true })),
         Err(e) => Ok(json!({ "success": false, "error": e.to_string() })),
     }
 }

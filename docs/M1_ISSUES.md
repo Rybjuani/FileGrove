@@ -8,7 +8,7 @@ implemented.
 No GitHub project, public release, signed updater, or updater service should be
 created during this phase.
 
-## Automated checks
+## Automated checks for the recovered Linux reconstruction
 
 - [x] TypeScript type checking
 - [x] ESLint with zero warnings
@@ -18,7 +18,7 @@ created during this phase.
 - [x] Rust formatting
 - [x] Rust Clippy with warnings denied
 - [x] Rust tests for rules, scanning, paths, EXIF, commands, and storage
-- [ ] Production desktop bundle build on the development PC
+- [ ] Production Linux desktop bundle build on the development PC
 
 ## Disposable-folder smoke test
 
@@ -27,7 +27,7 @@ Downloads, Documents, Desktop, or photo library for the first runs.
 
 - [ ] Add, rename, and remove a watched folder
 - [ ] Confirm overlapping watched folders are rejected
-- [ ] Create rules for move, Recycle Bin, permanent delete, and command actions
+- [ ] Create rules for move, Linux trash, permanent delete, and command actions
 - [ ] Preview each rule before organizing
 - [ ] Exercise rename, skip, and overwrite conflicts
 - [ ] Exercise recursive depth, exclusions, preserve structure, and flatten
@@ -35,7 +35,7 @@ Downloads, Documents, Desktop, or photo library for the first runs.
 - [ ] Confirm scheduled mode runs at the selected local time
 - [ ] Cancel an active organization and retry it
 - [ ] Undo a move and confirm existing destinations are never overwritten
-- [ ] Confirm Recycle Bin actions are recoverable through Windows
+- [ ] Confirm trash actions are recoverable through the Linux desktop
 - [ ] Confirm permanent delete always requires the explicit warning path
 - [ ] Confirm command test output, timeout, cancellation, and no accidental rerun
 - [ ] Confirm EXIF photo tokens and fallback file dates
@@ -43,11 +43,12 @@ Downloads, Documents, Desktop, or photo library for the first runs.
 - [ ] Confirm tray pause/resume/open/quit and single-instance behavior
 - [ ] Review activity history and background error notifications
 
-## Installer test (later)
+## Linux package test (later)
 
 After sustained disposable-folder testing:
 
-- [ ] Install the locally built package
+- [ ] Install the locally built `.deb` package
+- [ ] Launch the AppImage on a clean disposable profile
 - [ ] Launch, quit, reinstall, and uninstall cleanly
 - [ ] Confirm application data survives an ordinary app restart
 - [ ] Confirm no updater or external network dependency is present
@@ -57,4 +58,4 @@ After sustained disposable-folder testing:
 - GitHub publication and CI workflows
 - Public release artifacts and code signing
 - Signed automatic updates
-- Cross-platform installer validation outside this Windows PC
+- Windows and macOS builds, installers, and platform-specific validation

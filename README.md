@@ -6,8 +6,10 @@
 
 ## What is this?
 
-FileGrove is a cross-platform desktop application (Windows, macOS,
-Linux) that automates file organization. You add folders to watch,
+FileGrove is a Linux-first desktop application that automates file
+organization. The recovered Windows implementation remains a future
+compatibility target, but the current reconstruction is developed and
+validated on Linux. You add folders to watch,
 define rules (by extension, name, size, date, regex), and FileGrove
 moves new files into organized destinations — for example, sorting
 your Downloads folder automatically, or filing photos by capture date.
@@ -23,7 +25,7 @@ is based on the behavioral specification in [`docs/SPEC.md`](docs/SPEC.md).
 - Rule engine with 9 condition types (extension, name contains/starts/ends, regex, size, age)
 - Three folder modes: manual, automatic (real-time), scheduled (cron)
 - Path templates with date and EXIF tokens (`{year}/{month}/{name}`)
-- Recoverable Recycle Bin actions and guarded permanent deletion
+- Recoverable system-trash actions and guarded permanent deletion
 - Safe shell commands with test mode, timeout, cancellation, output capture,
   and change fingerprints that prevent accidental reruns
 - Recursive subfolder scanning with excludes
@@ -37,11 +39,11 @@ is based on the behavioral specification in [`docs/SPEC.md`](docs/SPEC.md).
 
 ## Quick start
 
-### Prerequisites
+### Linux prerequisites
 
 - [Rust](https://rustup.rs) 1.77.2+
 - [Node.js](https://nodejs.org) 20+
-- [Tauri 2 prerequisites](https://tauri.app/v2/guides/getting-started/prerequisites/)
+- [Tauri 2 Linux prerequisites](https://tauri.app/start/prerequisites/)
 
 ### Install & run
 
@@ -69,13 +71,14 @@ The current v0.1.0 build is in local testing. Implemented scope includes:
 
 - Folder watching + rule engine + manual/auto/scheduled organize
 - Recursive scan, undo log, activity history
-- Native Recycle Bin, EXIF tokens, safe command actions, and conflict handling
+- Native Linux trash, EXIF tokens, safe command actions, and conflict handling
 - Tray integration and single-instance startup
 - English + Spanish localization
 
-Before any public repository or release, the app should receive sustained local
-testing with disposable folders and a separate installer smoke test. Automatic
-updates are intentionally not implemented during this local-testing phase.
+Before any public repository or release, the Linux build should receive sustained
+local testing with disposable folders and a separate `.deb`/AppImage smoke test.
+Windows work is intentionally on standby. Automatic updates are not implemented
+during this local-testing phase.
 
 ## Contributing
 
