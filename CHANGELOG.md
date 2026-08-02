@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cancellation and multiple historical sessions
 - Black-box watcher integration tests for event bursts, pause/resume catch-up,
   and active or paused service restoration after restart
+- Real recursive organization coverage for flattened and preserved layouts,
+  maximum depth, and excluded folders
 
 ### Local-testing status
 

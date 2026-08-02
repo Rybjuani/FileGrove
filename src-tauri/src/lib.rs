@@ -23,7 +23,8 @@ mod watcher;
 #[doc(hidden)]
 pub mod integration_test_support {
     pub use crate::domain::{
-        Action, Condition, Folder, FolderMode, Rule, SubfolderConfig, WatcherStatus,
+        Action, Condition, DestinationMode, Folder, FolderMode, MaxDepth, Rule, SubfolderConfig,
+        WatcherStatus,
     };
     pub use crate::engine::cancellation::CancellationRegistry;
     pub use crate::storage::Database;

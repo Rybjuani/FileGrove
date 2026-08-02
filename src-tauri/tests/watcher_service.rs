@@ -5,8 +5,8 @@ use std::time::{Duration, Instant};
 
 use chrono::Utc;
 use filegrove_lib::integration_test_support::{
-    Action, CancellationRegistry, Condition, Database, Folder, FolderMode, Rule, SubfolderConfig,
-    WatcherService, WatcherStatus,
+    Action, CancellationRegistry, Condition, Database, DestinationMode, Folder, FolderMode,
+    MaxDepth, Rule, SubfolderConfig, WatcherService, WatcherStatus,
 };
 use serde_json::Value;
 use tempfile::TempDir;
@@ -74,6 +74,28 @@ impl Fixture {
 
     fn write(&self, name: &str) {
         fs::write(self.watched.join(name), format!("contents:{name}")).unwrap();
+    }
+
+    fn write_relative(&self, relative_path: &str) {
+        let path = self.watched.join(relative_path);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(path, format!("contents:{relative_path}")).unwrap();
+    }
+
+    fn configure_subfolders(
+        &mut self,
+        destination_mode: DestinationMode,
+        max_depth: MaxDepth,
+        exclude_folders: Vec<String>,
+    ) {
+        self.folder.subfolders = SubfolderConfig {
+            enabled: true,
+            destination_mode,
+            first_run_confirmed: true,
+            max_depth,
+        };
+        self.folder.exclude_folders = exclude_folders;
+        self.db.folders().update(&self.folder).unwrap();
     }
 
     fn destination(&self, name: &str) -> PathBuf {
@@ -205,4 +227,78 @@ async fn restart_restores_running_and_paused_watchers_without_losing_files() {
     );
 
     third.shutdown_all();
+}
+
+#[tokio::test]
+async fn recursive_flatten_moves_nested_files_into_one_managed_folder() {
+    let mut fixture = Fixture::new(WatcherStatus::Stopped);
+    fixture.configure_subfolders(DestinationMode::Flatten, MaxDepth::Level(5), Vec::new());
+    fixture.write_relative("Incoming/Reports/nested.txt");
+
+    let app = tauri::test::mock_app();
+    let watcher = WatcherService::new(
+        fixture.db.clone(),
+        Arc::new(CancellationRegistry::default()),
+    );
+    watcher
+        .start_watching_and_catch_up(app.handle(), &fixture.folder)
+        .unwrap();
+
+    let original = fixture.watched.join("Incoming/Reports/nested.txt");
+    wait_until("flattened recursive file", || {
+        fixture.destination("nested.txt").is_file() && !original.exists()
+    })
+    .await;
+    assert!(!original.exists());
+    assert!(!fixture
+        .watched
+        .join("Documents/Incoming/Reports/nested.txt")
+        .exists());
+    assert_eq!(
+        file_contents(fixture.destination("nested.txt")),
+        "contents:Incoming/Reports/nested.txt"
+    );
+
+    watcher.shutdown_all();
+}
+
+#[tokio::test]
+async fn recursive_preserve_respects_exclusions_and_maximum_depth() {
+    let mut fixture = Fixture::new(WatcherStatus::Stopped);
+    fixture.configure_subfolders(
+        DestinationMode::Preserve,
+        MaxDepth::Level(2),
+        vec!["Ignored".into()],
+    );
+    fixture.write_relative("Year/Trip/photo.txt");
+    fixture.write_relative("Too/Deep/Folder/deep.txt");
+    fixture.write_relative("Ignored/secret.txt");
+
+    let app = tauri::test::mock_app();
+    let watcher = WatcherService::new(
+        fixture.db.clone(),
+        Arc::new(CancellationRegistry::default()),
+    );
+    watcher
+        .start_watching_and_catch_up(app.handle(), &fixture.folder)
+        .unwrap();
+
+    let preserved = fixture.watched.join("Documents/Year/Trip/photo.txt");
+    let original = fixture.watched.join("Year/Trip/photo.txt");
+    wait_until("preserved recursive file", || {
+        preserved.is_file() && !original.exists()
+    })
+    .await;
+    assert_eq!(file_contents(&preserved), "contents:Year/Trip/photo.txt");
+    assert!(!original.exists());
+    assert_eq!(
+        file_contents(fixture.watched.join("Too/Deep/Folder/deep.txt")),
+        "contents:Too/Deep/Folder/deep.txt"
+    );
+    assert_eq!(
+        file_contents(fixture.watched.join("Ignored/secret.txt")),
+        "contents:Ignored/secret.txt"
+    );
+
+    watcher.shutdown_all();
 }
