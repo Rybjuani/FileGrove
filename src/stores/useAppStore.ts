@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { create } from 'zustand';
 import { ipc } from '../ipc';
-import type { Folder, Rule, Schedule, Settings, SubfolderConfig } from '../ipc/types';
+import type { Folder, Rule, Settings, SubfolderConfig } from '../ipc/types';
 
 interface AppState {
   // Data
@@ -22,10 +22,9 @@ interface AppState {
   updateFolderName: (id: string, name: string) => Promise<void>;
   updateFolderMode: (
     id: string,
-    mode: 'single' | 'auto' | 'scheduled',
+    mode: 'single' | 'auto',
     disableSubfolders?: boolean,
   ) => Promise<boolean>;
-  updateFolderSchedule: (id: string, schedule: Schedule) => Promise<boolean>;
   updateFolderSubfolders: (id: string, config: SubfolderConfig) => Promise<boolean>;
   updateFolderExclusions: (
     id: string,
@@ -135,18 +134,6 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ folders: get().folders.map((f) => (f.id === id ? res.data! : f)) });
       return true;
     } else if (res.error) {
-      set({ error: res.error });
-    }
-    return false;
-  },
-
-  updateFolderSchedule: async (id, schedule) => {
-    const res = await ipc.folders.updateSchedule(id, schedule);
-    if (res.success && res.data) {
-      set({ folders: get().folders.map((f) => (f.id === id ? res.data! : f)) });
-      return true;
-    }
-    if (res.error) {
       set({ error: res.error });
     }
     return false;

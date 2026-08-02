@@ -1,6 +1,6 @@
 // Shared IPC types — mirror of the Rust domain types in src-tauri/src/domain/.
 
-export type FolderMode = 'single' | 'auto' | 'scheduled';
+export type FolderMode = 'single' | 'auto';
 export type WatcherStatus = 'stopped' | 'running' | 'paused';
 export type DestinationMode = 'flatten' | 'preserve';
 export type ActivityType = 'move' | 'trash' | 'delete' | 'runCommand';
@@ -13,12 +13,6 @@ export interface SubfolderConfig {
   maxDepth: MaxDepth;
 }
 
-export interface Schedule {
-  enabled: boolean;
-  daysOfWeek: number[]; // 0 = Sunday, 6 = Saturday
-  time: string; // "HH:MM" 24h
-}
-
 export interface Folder {
   id: string;
   path: string;
@@ -28,7 +22,6 @@ export interface Folder {
   watcherStatus: WatcherStatus;
   createdAt: string; // ISO 8601
   subfolders: SubfolderConfig;
-  schedule: Schedule | null;
   excludeFolders: string[];
   excludePatterns: string[];
 }

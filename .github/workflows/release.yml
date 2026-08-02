@@ -7,24 +7,10 @@ on:
 
 jobs:
   publish:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: ubuntu-latest
-            args: ''
-          - platform: windows-latest
-            args: ''
-          - platform: macos-latest
-            args: '--target aarch64-apple-darwin'
-          - platform: macos-latest
-            args: '--target x86_64-apple-darwin'
-    runs-on: ${{ matrix.platform }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
@@ -34,7 +20,6 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Install Linux deps
-        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
@@ -47,4 +32,4 @@ jobs:
           releaseBody: 'See the assets below to download and install.'
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.args }}
+          args: '--bundles deb,appimage'

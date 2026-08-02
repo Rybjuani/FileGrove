@@ -97,7 +97,6 @@
     "invalidRuleName": "El nombre de la regla no es válido.",
     "invalidRuleOrder": "La prioridad de la regla no es válida.",
     "invalidRuleRegex": "La expresión regular no es válida.",
-    "invalidSchedule": "Selecciona al menos un día y una hora válida.",
     "invalidSessionId": "Sesión no válida.",
     "invalidSettings": "El valor elegido para el ajuste no es válido.",
     "moveFailed": "No se pudo mover el archivo.",
@@ -162,7 +161,7 @@
     "advanced": {
       "assignedRules": "Reglas asignadas a esta carpeta",
       "autoDisablesRecursiveConfirm": "El modo automático solo vigila la raíz de la carpeta. ¿Desactivar el escaneo recursivo y cambiar a modo automático?",
-      "dangerousAssignmentConfirm": "¿Asignar {{count}} regla(s) potencialmente destructiva(s) a esta carpeta automática o programada?",
+      "dangerousAssignmentConfirm": "¿Asignar {{count}} regla(s) potencialmente destructiva(s) a esta carpeta automática?",
       "dangerousRuleWarning": "Las reglas de eliminación permanente y comandos pueden cambiar archivos sin opción de deshacer. Revisa su impacto antes de automatizarlas.",
       "destinationMode": "Estructura de subcarpetas en el destino",
       "excludeFolders": "Carpetas excluidas (una ruta relativa por línea)",
@@ -180,7 +179,6 @@
     },
     "mode": {
       "auto": "Automático",
-      "scheduled": "Programado",
       "single": "Manual"
     },
     "recommended": {
@@ -196,7 +194,6 @@
       "dangerousAutoConfirm": "Acciones automáticas potencialmente destructivas para esta carpeta: {{count}}. ¿Activar el modo automático?",
       "dangerousManualConfirm": "Acciones potencialmente destructivas (eliminación permanente o comandos): {{count}}. ¿Continuar?",
       "dangerousPreviewBlocked": "Revisa la vista previa antes de ejecutar eliminaciones permanentes o comandos.",
-      "dangerousScheduledConfirm": "Acciones programadas potencialmente destructivas para esta carpeta: {{count}}. ¿Activar la programación?",
       "destination": "Destino",
       "file": "Archivo",
       "groupsRemaining": "Hay {{count}} categorías adicionales.",
@@ -217,47 +214,6 @@
     "removeConfirm": "¿Quitar “{{name}}” de FileGrove? No se eliminará ningún archivo.",
     "rename": "Cambiar nombre",
     "rules": "Reglas",
-    "schedule": {
-      "day": {
-        "fri": {
-          "long": "Viernes",
-          "short": "Vie"
-        },
-        "mon": {
-          "long": "Lunes",
-          "short": "Lun"
-        },
-        "sat": {
-          "long": "Sábado",
-          "short": "Sáb"
-        },
-        "sun": {
-          "long": "Domingo",
-          "short": "Dom"
-        },
-        "thu": {
-          "long": "Jueves",
-          "short": "Jue"
-        },
-        "tue": {
-          "long": "Martes",
-          "short": "Mar"
-        },
-        "wed": {
-          "long": "Miércoles",
-          "short": "Mié"
-        }
-      },
-      "days": "Días",
-      "disabled": "Desactivado",
-      "enabled": "Activado",
-      "nextRunLabel": "Próxima ejecución",
-      "notScheduled": "Elige días y una hora para programar.",
-      "statusActive": "Programación activa",
-      "statusDisabled": "Programación desactivada",
-      "time": "Hora",
-      "title": "Programación"
-    },
     "watcher": {
       "paused": "En pausa",
       "running": "Vigilando",
@@ -346,7 +302,7 @@
     "disabled": "Desactivada",
     "editRule": "Editar regla",
     "enable": "Activar",
-    "enableDangerousConfirm": "¿Activar la regla potencialmente destructiva «{{name}}»? Está asignada a {{count}} carpeta(s) automática(s) o programada(s) activa(s) y puede ejecutarse de inmediato: {{folders}}",
+    "enableDangerousConfirm": "¿Activar la regla potencialmente destructiva «{{name}}»? Está asignada a {{count}} carpeta(s) automática(s) activa(s) y puede ejecutarse de inmediato: {{folders}}",
     "enabledOnSave": "Activar esta regla",
     "form": {
       "conditionLabels": {

@@ -833,7 +833,6 @@ mod tests {
                 watcher_status: crate::domain::WatcherStatus::Stopped,
                 created_at: Utc::now(),
                 subfolders: crate::domain::SubfolderConfig::default(),
-                schedule: None,
                 exclude_folders: Vec::new(),
                 exclude_patterns: Vec::new(),
             })
@@ -918,7 +917,6 @@ mod tests {
                 watcher_status: crate::domain::WatcherStatus::Stopped,
                 created_at: Utc::now(),
                 subfolders: crate::domain::SubfolderConfig::default(),
-                schedule: None,
                 exclude_folders: Vec::new(),
                 exclude_patterns: Vec::new(),
             })

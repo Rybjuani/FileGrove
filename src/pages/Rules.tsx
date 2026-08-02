@@ -97,10 +97,7 @@ export function Rules() {
   const toggleWithConfirmation = async (rule: Rule) => {
     if (!rule.enabled && isDangerousAction(rule.action)) {
       const activeFolders = folders.filter(
-        (folder) =>
-          folder.ruleIds.includes(rule.id) &&
-          (folder.mode === 'auto' ||
-            (folder.mode === 'scheduled' && Boolean(folder.schedule?.enabled))),
+        (folder) => folder.ruleIds.includes(rule.id) && folder.mode === 'auto',
       );
       if (
         activeFolders.length > 0 &&

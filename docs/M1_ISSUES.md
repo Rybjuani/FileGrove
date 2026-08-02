@@ -1,12 +1,12 @@
 # Local validation checklist
 
 FileGrove 0.1.0 is being tested only on the development PC. This file replaces
-the original scaffold milestone: the rule engine, watcher, scheduler, undo,
+the original scaffold milestone: the rule engine, watcher, undo,
 EXIF support, command actions, tray integration, and advanced UI are now
 implemented.
 
-No GitHub project, public release, signed updater, or updater service should be
-created during this phase.
+A private GitHub source repository and CI are active. Public releases, signed
+updates, and an updater service remain outside this phase.
 
 ## Automated checks for the recovered Linux reconstruction
 
@@ -18,7 +18,7 @@ created during this phase.
 - [x] Rust formatting
 - [x] Rust Clippy with warnings denied
 - [x] Rust tests for rules, scanning, paths, EXIF, commands, and storage
-- [ ] Production Linux desktop bundle build on the development PC
+- [x] Production Linux desktop bundle build on the development PC
 
 ## Disposable-folder smoke test
 
@@ -32,14 +32,13 @@ Downloads, Documents, Desktop, or photo library for the first runs.
 - [ ] Exercise rename, skip, and overwrite conflicts
 - [ ] Exercise recursive depth, exclusions, preserve structure, and flatten
 - [ ] Confirm automatic mode reacts only to the changed files
-- [ ] Confirm scheduled mode runs at the selected local time
 - [ ] Cancel an active organization and retry it
 - [ ] Undo a move and confirm existing destinations are never overwritten
 - [ ] Confirm trash actions are recoverable through the Linux desktop
 - [ ] Confirm permanent delete always requires the explicit warning path
 - [ ] Confirm command test output, timeout, cancellation, and no accidental rerun
 - [ ] Confirm EXIF photo tokens and fallback file dates
-- [ ] Restart the app and confirm folders, rules, settings, and schedules persist
+- [ ] Restart the app and confirm folders, rules, and settings persist
 - [ ] Confirm tray pause/resume/open/quit and single-instance behavior
 - [ ] Review activity history and background error notifications
 
@@ -48,14 +47,13 @@ Downloads, Documents, Desktop, or photo library for the first runs.
 After sustained disposable-folder testing:
 
 - [ ] Install the locally built `.deb` package
-- [ ] Launch the AppImage on a clean disposable profile
+- [x] Launch the AppImage on a clean disposable profile
 - [ ] Launch, quit, reinstall, and uninstall cleanly
 - [ ] Confirm application data survives an ordinary app restart
 - [ ] Confirm no updater or external network dependency is present
 
 ## Deferred intentionally
 
-- GitHub publication and CI workflows
 - Public release artifacts and code signing
 - Signed automatic updates
 - Windows and macOS builds, installers, and platform-specific validation

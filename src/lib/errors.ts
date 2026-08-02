@@ -42,7 +42,6 @@ const ERROR_KEYS: Record<string, string> = {
   INVALID_RULE_NAME: 'errors.invalidRuleName',
   INVALID_RULE_ORDER: 'errors.invalidRuleOrder',
   INVALID_RULE_REGEX: 'errors.invalidRuleRegex',
-  INVALID_SCHEDULE: 'errors.invalidSchedule',
   INVALID_SESSION_ID: 'errors.invalidSessionId',
   INVALID_SETTINGS: 'errors.invalidSettings',
   MOVE_CANCELLED: 'errors.moveCancelled',

@@ -8,8 +8,7 @@ use rusqlite::Connection;
 use uuid::Uuid;
 
 use crate::domain::{
-    Action, Condition, Folder, FolderMode, Rule, Schedule, SubfolderConfig, WatcherStatus,
-    QUICK_RULES,
+    Action, Condition, Folder, FolderMode, Rule, SubfolderConfig, WatcherStatus, QUICK_RULES,
 };
 
 pub struct FolderRepo {
@@ -21,7 +20,7 @@ impl FolderRepo {
         let conn = self.conn.lock();
         let mut stmt = conn.prepare(
             "SELECT id, path, name, mode, rule_ids, watcher_status, created_at, \
-             subfolders, schedule, exclude_folders, exclude_patterns \
+             subfolders, exclude_folders, exclude_patterns \
              FROM folders ORDER BY created_at ASC",
         )?;
         let rows = stmt.query_map([], row_to_folder)?;
@@ -36,7 +35,7 @@ impl FolderRepo {
         let conn = self.conn.lock();
         let mut stmt = conn.prepare(
             "SELECT id, path, name, mode, rule_ids, watcher_status, created_at, \
-             subfolders, schedule, exclude_folders, exclude_patterns \
+             subfolders, exclude_folders, exclude_patterns \
              FROM folders WHERE id = ?",
         )?;
         let mut rows = stmt.query_map([id.to_string()], row_to_folder)?;
@@ -51,7 +50,7 @@ impl FolderRepo {
         let conn = self.conn.lock();
         let mut stmt = conn.prepare(
             "SELECT id, path, name, mode, rule_ids, watcher_status, created_at, \
-             subfolders, schedule, exclude_folders, exclude_patterns \
+             subfolders, exclude_folders, exclude_patterns \
              FROM folders WHERE path = ?",
         )?;
         let mut rows = stmt.query_map([path], row_to_folder)?;
@@ -66,8 +65,8 @@ impl FolderRepo {
         let conn = self.conn.lock();
         conn.execute(
             "INSERT INTO folders (id, path, name, mode, rule_ids, watcher_status, \
-             created_at, subfolders, schedule, exclude_folders, exclude_patterns) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+             created_at, subfolders, exclude_folders, exclude_patterns) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             rusqlite::params![
                 folder.id.to_string(),
                 folder.path,
@@ -77,10 +76,6 @@ impl FolderRepo {
                 folder.watcher_status.as_str(),
                 folder.created_at.to_rfc3339(),
                 serde_json::to_string(&folder.subfolders)?,
-                folder
-                    .schedule
-                    .as_ref()
-                    .map(|s| serde_json::to_string(s).unwrap_or_default()),
                 serde_json::to_string(&folder.exclude_folders)?,
                 serde_json::to_string(&folder.exclude_patterns)?,
             ],
@@ -92,7 +87,7 @@ impl FolderRepo {
         let conn = self.conn.lock();
         conn.execute(
             "UPDATE folders SET path=?2, name=?3, mode=?4, rule_ids=?5, watcher_status=?6, \
-             subfolders=?7, schedule=?8, exclude_folders=?9, exclude_patterns=?10 \
+             subfolders=?7, exclude_folders=?8, exclude_patterns=?9 \
              WHERE id=?1",
             rusqlite::params![
                 folder.id.to_string(),
@@ -102,10 +97,6 @@ impl FolderRepo {
                 serde_json::to_string(&folder.rule_ids)?,
                 folder.watcher_status.as_str(),
                 serde_json::to_string(&folder.subfolders)?,
-                folder
-                    .schedule
-                    .as_ref()
-                    .map(|s| serde_json::to_string(s).unwrap_or_default()),
                 serde_json::to_string(&folder.exclude_folders)?,
                 serde_json::to_string(&folder.exclude_patterns)?,
             ],
@@ -271,9 +262,8 @@ fn row_to_folder(row: &rusqlite::Row<'_>) -> rusqlite::Result<Folder> {
     let status_str: String = row.get(5)?;
     let created_at_str: String = row.get(6)?;
     let subfolders_str: String = row.get(7)?;
-    let schedule_str: Option<String> = row.get(8)?;
-    let exclude_folders_str: String = row.get(9)?;
-    let exclude_patterns_str: String = row.get(10)?;
+    let exclude_folders_str: String = row.get(8)?;
+    let exclude_patterns_str: String = row.get(9)?;
 
     let id = Uuid::parse_str(&id_str).map_err(|e| {
         rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e))
@@ -289,9 +279,6 @@ fn row_to_folder(row: &rusqlite::Row<'_>) -> rusqlite::Result<Folder> {
         .map(|d| d.with_timezone(&chrono::Utc))
         .unwrap_or_else(|_| chrono::Utc::now());
     let subfolders: SubfolderConfig = serde_json::from_str(&subfolders_str).unwrap_or_default();
-    let schedule: Option<Schedule> = schedule_str
-        .as_ref()
-        .and_then(|s| serde_json::from_str(s).ok());
     let exclude_folders: Vec<String> =
         serde_json::from_str(&exclude_folders_str).unwrap_or_default();
     let exclude_patterns: Vec<String> =
@@ -306,7 +293,6 @@ fn row_to_folder(row: &rusqlite::Row<'_>) -> rusqlite::Result<Folder> {
         watcher_status,
         created_at,
         subfolders,
-        schedule,
         exclude_folders,
         exclude_patterns,
     })
@@ -335,7 +321,6 @@ mod tests {
             watcher_status: WatcherStatus::Stopped,
             created_at: chrono::Utc::now(),
             subfolders: SubfolderConfig::default(),
-            schedule: None,
             exclude_folders: vec![],
             exclude_patterns: vec![],
         };

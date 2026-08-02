@@ -1,8 +1,6 @@
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 
-use super::Schedule;
-
 /// A folder that the user wants FileGrove to organize.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -15,7 +13,6 @@ pub struct Folder {
     pub watcher_status: WatcherStatus,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub subfolders: SubfolderConfig,
-    pub schedule: Option<Schedule>,
     pub exclude_folders: Vec<String>,
     pub exclude_patterns: Vec<String>,
 }
@@ -55,8 +52,6 @@ pub enum FolderMode {
     Single,
     /// Real-time: every new file triggers rules immediately.
     Auto,
-    /// Cron-driven: rules fire on a schedule.
-    Scheduled,
 }
 
 impl FolderMode {
@@ -64,7 +59,6 @@ impl FolderMode {
         match s {
             "single" => Some(Self::Single),
             "auto" => Some(Self::Auto),
-            "scheduled" => Some(Self::Scheduled),
             _ => None,
         }
     }
@@ -73,7 +67,6 @@ impl FolderMode {
         match self {
             Self::Single => "single",
             Self::Auto => "auto",
-            Self::Scheduled => "scheduled",
         }
     }
 }
@@ -242,7 +235,6 @@ mod tests {
                 first_run_confirmed: confirmed,
                 max_depth: MaxDepth::Level(5),
             },
-            schedule: None,
             exclude_folders: vec!["private".into()],
             exclude_patterns: vec!["*.tmp".into()],
         }

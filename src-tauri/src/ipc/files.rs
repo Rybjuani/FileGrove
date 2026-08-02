@@ -350,7 +350,7 @@ async fn organize_inner_with_gate(
 /// Organize only the root-level files reported by the live watcher. A normal
 /// filesystem event must never trigger a full rescan of the watched folder;
 /// full scans are reserved for explicit start/resume catch-up and manual or
-/// scheduled runs.
+/// automatic runs.
 pub async fn organize_automated_paths_inner(
     app: &AppHandle,
     db: &Database,

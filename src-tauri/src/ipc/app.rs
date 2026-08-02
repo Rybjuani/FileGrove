@@ -48,11 +48,9 @@ pub(crate) fn apply_automation_paused(app: &AppHandle, paused: bool) -> Result<(
         .set("automationPaused", &serde_json::Value::Bool(paused))
         .map_err(|error| error.to_string())?;
     if paused {
-        state.scheduler.pause_all();
         state.watcher.pause_all(app);
     } else {
         state.watcher.resume_all(app);
-        state.scheduler.resume_all();
     }
     let _ = app.emit(
         "automation:pause-changed",

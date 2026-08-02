@@ -1,4 +1,4 @@
-//! Ordered application shutdown for watcher, scheduler and active operations.
+//! Ordered application shutdown for the watcher and active operations.
 
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::time::{Duration, Instant};
@@ -64,7 +64,6 @@ pub fn request_exit(app: &AppHandle) {
 
     tracing::info!("orderly shutdown requested");
     state.watcher.shutdown_all();
-    state.scheduler.begin_shutdown();
     state.cancellations.begin_shutdown();
     if let Some(tray) = state.tray.read().as_ref() {
         let _ = tray.set_visible(false);
@@ -76,7 +75,6 @@ pub fn request_exit(app: &AppHandle) {
             app.exit(0);
             return;
         };
-        state.scheduler.shutdown().await;
         let deadline = Instant::now() + Duration::from_secs(3);
         while state.cancellations.has_active_work() && Instant::now() < deadline {
             tokio::time::sleep(Duration::from_millis(25)).await;
@@ -93,7 +91,6 @@ pub fn request_exit(app: &AppHandle) {
 pub fn force_quiesce(app: &AppHandle) {
     if let Some(state) = app.try_state::<crate::AppState>() {
         state.watcher.shutdown_all();
-        state.scheduler.begin_shutdown();
         state.cancellations.begin_shutdown();
         state.shutdown.ready();
     }

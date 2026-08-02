@@ -10,8 +10,6 @@ mod exif;
 #[cfg(not(test))]
 mod ipc;
 mod paths;
-#[cfg(not(test))]
-mod scheduler;
 mod shutdown;
 mod storage;
 #[cfg(not(test))]
@@ -39,7 +37,6 @@ pub struct AppState {
     pub db: Arc<Database>,
     pub cancellations: Arc<engine::cancellation::CancellationRegistry>,
     pub watcher: Arc<watcher::WatcherService>,
-    pub scheduler: Arc<scheduler::SchedulerService>,
     pub shutdown: Arc<shutdown::ShutdownCoordinator>,
     pub tray: Arc<RwLock<Option<tray::TrayService>>>,
 }
@@ -51,7 +48,7 @@ pub fn run() {
 
     tauri::Builder::default()
         // Register first: a second launch should focus the existing window
-        // before any watcher, scheduler, tray or database service is started.
+        // before any watcher, tray or database service is started.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
@@ -84,25 +81,16 @@ pub fn run() {
                 db.clone(),
                 cancellations.clone(),
             ));
-            let scheduler = Arc::new(scheduler::SchedulerService::new(
-                db.clone(),
-                cancellations.clone(),
-            ));
-            scheduler.set_app_handle(app.handle().clone());
-
-            // Restore background services exactly as they were when the app closed.
+            // Restore automatic watchers exactly as they were when the app closed.
             watcher.init(app.handle())?;
-            tauri::async_runtime::block_on(scheduler.init())?;
             if db.settings().get_automation_paused() {
                 watcher.pause_all(app.handle());
-                scheduler.pause_all();
             }
 
             let state = AppState {
                 db: db.clone(),
                 cancellations,
                 watcher: watcher.clone(),
-                scheduler: scheduler.clone(),
                 shutdown: Arc::new(shutdown::ShutdownCoordinator::default()),
                 tray: Arc::new(RwLock::new(None)),
             };
@@ -154,8 +142,6 @@ pub fn run() {
             ipc::folders::update_subfolders_config,
             ipc::folders::update_configuration,
             ipc::folders::update_exclusions,
-            ipc::folders::update_schedule,
-            ipc::folders::get_next_run,
             ipc::folders::select_destination,
             ipc::folders::confirm_first_run,
             // Rules

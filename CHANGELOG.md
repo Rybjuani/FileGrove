@@ -8,10 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - Project scaffold: Tauri 2 + React 18 + TypeScript + Tailwind + Rust
 - SQLite persistence with `refinery` migrations (V0001 initial schema)
-- Domain types: `Folder`, `Rule`, `Condition`, `Action`, `Schedule`,
-  `Activity`, `UndoEntry`
+- Domain types: `Folder`, `Rule`, `Condition`, `Action`, `Activity`,
+  `UndoEntry`
 - Rule engine: condition matcher, plan computation, action executor
   (safe move, Recycle Bin, guarded delete, and runCommand)
 - Full path token resolver with local file dates and EXIF capture metadata,
@@ -22,10 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Recursive scanner with depth, excludes, preserved relative structure,
   progress throttling, and a 100,000-file safety cap
 - Watcher service with functional pause/resume and startup restoration
-- Local-time scheduler with startup restoration and next-run reporting
 - Cooperative organization and command cancellation, plus retryable undo
   sessions that do not overwrite existing files
-- Schedule controls for enablement, weekdays, time, and next execution
 - Tray icon with Open/Pause All/Resume All/Quit menu
 - Single-instance protection and real launch-at-startup/tray settings
 - IPC handlers for: app, folders, rules, files, organize, watcher,
@@ -38,7 +37,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/M1_ISSUES.md` — local validation checklist
 
 ### Local-testing status
+
 - The interface currently ships in English and Spanish
 - Automatic updates are intentionally excluded
 - Installer smoke testing and sustained real-folder testing remain before a
   public release
+
+### Removed
+
+- Scheduled/cron organization from the Linux-first product. Legacy scheduled
+  folders migrate to inactive manual mode while their old schedule data remains
+  preserved for compatibility.

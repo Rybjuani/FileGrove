@@ -23,7 +23,7 @@ is based on the behavioral specification in [`docs/SPEC.md`](docs/SPEC.md).
 
 - Watch multiple folders simultaneously
 - Rule engine with 9 condition types (extension, name contains/starts/ends, regex, size, age)
-- Three folder modes: manual, automatic (real-time), scheduled (cron)
+- Two clear folder modes: manual and automatic (real-time)
 - Path templates with date and EXIF tokens (`{year}/{month}/{name}`)
 - Recoverable system-trash actions and guarded permanent deletion
 - Safe shell commands with test mode, timeout, cancellation, output capture,
@@ -34,7 +34,7 @@ is based on the behavioral specification in [`docs/SPEC.md`](docs/SPEC.md).
 - Activity history with command output, failures, and interrupted-action review
 - System tray integration
 - English and Spanish interface
-- Single-instance desktop process with automatic-mode watchers and schedules
+- Single-instance desktop process with automatic-mode watchers
 - **No telemetry, no license server, no paywall** — fully open-source
 
 ## Quick start
@@ -63,13 +63,14 @@ Output: `src-tauri/target/release/bundle/`
 ## Documentation
 
 - [`docs/SPEC.md`](docs/SPEC.md) — Full behavioral specification
+- [`docs/ROADMAP_1_0.md`](docs/ROADMAP_1_0.md) — Linux release gates through 1.0
 - [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — How to contribute
 
 ## Roadmap
 
 The current v0.1.0 build is in local testing. Implemented scope includes:
 
-- Folder watching + rule engine + manual/auto/scheduled organize
+- Folder watching + rule engine + manual/automatic organization
 - Recursive scan, undo log, activity history
 - Native Linux trash, EXIF tokens, safe command actions, and conflict handling
 - Tray integration and single-instance startup

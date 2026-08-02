@@ -2,10 +2,17 @@
 
 > **Current implementation scope (local test build).** This is a reference
 > specification and long-term product map, not a claim that every described
-> service ships today. The current FileGrove build is local-only and
+> service ships today. The current FileGrove build is Linux-first and
 > intentionally excludes automatic updates, accounts/licensing, telemetry,
-> public release infrastructure, and GitHub distribution. `README.md` and
+> and public release infrastructure. `README.md` and
 > `docs/M1_ISSUES.md` are the source of truth for what is ready to test now.
+
+> **Linux product decision.** Scheduled/cron organization described in the
+> observed reference behavior is intentionally excluded from FileGrove's
+> Linux-first product. FileGrove offers Manual and Automatic modes; legacy
+> scheduled folders are migrated to inactive Manual mode without discarding
+> their old configuration. References to scheduling below document the
+> inspiration product and are not current FileGrove requirements.
 
 > **Purpose.** This document is a behavioral specification derived from
 > black-box observation of **File Arbor v1.1.2** by Furkan Bagci

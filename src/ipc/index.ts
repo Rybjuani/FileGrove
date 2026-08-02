@@ -97,10 +97,6 @@ export const ipc = {
         ruleIds,
         confirmRecursive,
       }),
-    updateSchedule: (id: string, schedule: unknown) =>
-      invoke<IpcResponse<Folder>>('update_schedule', { id, schedule }),
-    getNextRun: (id: string) =>
-      invoke<IpcResponse<{ nextRun: string | null }>>('get_next_run', { id }),
     selectDestination: () => invoke<IpcResponse<string>>('select_destination'),
     confirmFirstRun: (id: string) => invoke<IpcResponse<Folder>>('confirm_first_run', { id }),
   },

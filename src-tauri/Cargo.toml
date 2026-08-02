@@ -30,7 +30,6 @@ tauri-plugin-autostart = "2.0.0-beta"
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }
-tokio-cron-scheduler = "0.10"
 
 # Storage
 rusqlite = { version = "0.31", features = ["bundled"] }

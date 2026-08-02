@@ -97,7 +97,6 @@
     "invalidRuleName": "The rule name is invalid.",
     "invalidRuleOrder": "The rule priority is invalid.",
     "invalidRuleRegex": "The regular expression is invalid.",
-    "invalidSchedule": "Choose at least one day and a valid time.",
     "invalidSessionId": "Invalid session ID",
     "invalidSettings": "The selected setting value is invalid.",
     "moveFailed": "The file could not be moved.",
@@ -162,7 +161,7 @@
     "advanced": {
       "assignedRules": "Rules assigned to this folder",
       "autoDisablesRecursiveConfirm": "Automatic mode watches only the folder root. Disable recursive scanning and switch to automatic mode?",
-      "dangerousAssignmentConfirm": "Assign {{count}} potentially destructive rule(s) to this automatic or scheduled folder?",
+      "dangerousAssignmentConfirm": "Assign {{count}} potentially destructive rule(s) to this automatic folder?",
       "dangerousRuleWarning": "Permanent deletion and command rules can change files without an undo. Preview their impact before enabling automation.",
       "destinationMode": "Subfolder destination layout",
       "excludeFolders": "Excluded folders (one relative path per line)",
@@ -180,7 +179,6 @@
     },
     "mode": {
       "auto": "Automatic",
-      "scheduled": "Scheduled",
       "single": "Manual"
     },
     "recommended": {
@@ -196,7 +194,6 @@
       "dangerousAutoConfirm": "Potentially destructive automatic actions for this folder: {{count}}. Enable automatic mode?",
       "dangerousManualConfirm": "Potentially destructive actions (permanent deletion or commands): {{count}}. Continue?",
       "dangerousPreviewBlocked": "Review the preview before running permanent deletions or commands.",
-      "dangerousScheduledConfirm": "Potentially destructive scheduled actions for this folder: {{count}}. Enable the schedule?",
       "destination": "Destination",
       "file": "File",
       "groupsRemaining": "There are {{count}} more categories.",
@@ -217,47 +214,6 @@
     "removeConfirm": "Remove “{{name}}” from FileGrove? No files will be deleted.",
     "rename": "Rename folder",
     "rules": "Rules",
-    "schedule": {
-      "day": {
-        "fri": {
-          "long": "Friday",
-          "short": "Fri"
-        },
-        "mon": {
-          "long": "Monday",
-          "short": "Mon"
-        },
-        "sat": {
-          "long": "Saturday",
-          "short": "Sat"
-        },
-        "sun": {
-          "long": "Sunday",
-          "short": "Sun"
-        },
-        "thu": {
-          "long": "Thursday",
-          "short": "Thu"
-        },
-        "tue": {
-          "long": "Tuesday",
-          "short": "Tue"
-        },
-        "wed": {
-          "long": "Wednesday",
-          "short": "Wed"
-        }
-      },
-      "days": "Days",
-      "disabled": "Disabled",
-      "enabled": "Enabled",
-      "nextRunLabel": "Next run",
-      "notScheduled": "Enable a valid schedule",
-      "statusActive": "Schedule active",
-      "statusDisabled": "Schedule disabled",
-      "time": "Time",
-      "title": "Schedule"
-    },
     "watcher": {
       "paused": "Paused",
       "running": "Watching",
@@ -346,7 +302,7 @@
     "disabled": "Disabled",
     "editRule": "Edit rule",
     "enable": "Enable",
-    "enableDangerousConfirm": "Enable the potentially destructive rule “{{name}}”? It is assigned to {{count}} active automatic or scheduled folder(s) and can run immediately: {{folders}}",
+    "enableDangerousConfirm": "Enable the potentially destructive rule “{{name}}”? It is assigned to {{count}} active automatic folder(s) and can run immediately: {{folders}}",
     "enabledOnSave": "Enable this rule",
     "form": {
       "conditionLabels": {

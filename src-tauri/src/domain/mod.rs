@@ -8,11 +8,9 @@ pub mod activity;
 pub mod condition;
 pub mod folder;
 pub mod rule;
-pub mod schedule;
 pub mod undo;
 
 pub use action::*;
 pub use condition::*;
 pub use folder::*;
 pub use rule::*;
-pub use schedule::*;

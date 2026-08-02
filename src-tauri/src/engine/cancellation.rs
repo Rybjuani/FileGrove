@@ -124,7 +124,7 @@ impl CancellationRegistry {
     }
 
     /// Signal every cancellable organization session at once. This is used
-    /// during application shutdown after watcher and scheduler producers have
+    /// during application shutdown after watcher producers have
     /// been disabled, so no new background work should be published.
     pub fn cancel_all(&self) -> usize {
         let mut cancelled = 0;

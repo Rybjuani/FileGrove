@@ -54,8 +54,7 @@ export function FolderAdvancedSettings({ folder }: { folder: Folder }) {
         !folder.ruleIds.includes(rule.id) &&
         isDangerousAction(rule.action),
     );
-    const automationActive =
-      folder.mode === 'auto' || (folder.mode === 'scheduled' && Boolean(folder.schedule?.enabled));
+    const automationActive = folder.mode === 'auto';
     if (
       automationActive &&
       newlyAssignedDangerous.length > 0 &&
