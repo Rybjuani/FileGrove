@@ -5,8 +5,6 @@ use tauri::{AppHandle, Emitter, State};
 use uuid::Uuid;
 
 use crate::domain::WatcherStatus;
-use crate::engine::file_ops::{move_file, ConflictBehavior, MoveOutcome};
-use crate::storage::undo::UndoJournalState;
 use crate::AppState;
 
 #[tauri::command]
@@ -120,30 +118,13 @@ pub async fn undo(
         None
     };
 
-    // Undo is intentionally a stack. Reverting an older batch while newer
-    // moves still depend on it can create collisions or restore files into a
-    // layout that never existed. Repeated Undo still reaches every batch.
     if let Some(folder) = origin_folder.as_ref() {
-        let root = std::path::PathBuf::from(crate::paths::safety::canonical_path_key(Path::new(
-            &folder.path,
-        )));
-        let sessions = match state.db.undo().list_sessions() {
-            Ok(sessions) => sessions,
-            Err(error) => {
-                return Ok(json!({ "success": false, "error": error.to_string() }));
-            }
-        };
-        let latest_for_folder = sessions.into_iter().find(|session| {
-            let origin = std::path::PathBuf::from(crate::paths::safety::canonical_path_key(
-                Path::new(&session.from_path),
-            ));
-            origin.starts_with(&root)
-        });
-        if latest_for_folder.is_some_and(|latest| latest.session_id != session_id) {
-            return Ok(json!({
-                "success": false,
-                "error": "UNDO_NEWER_SESSION_EXISTS"
-            }));
+        if let Err(error) = crate::engine::undo::ensure_latest_session_for_root(
+            &state.db,
+            session_id,
+            Path::new(&folder.path),
+        ) {
+            return Ok(json!({ "success": false, "error": error }));
         }
     }
 
@@ -159,111 +140,19 @@ pub async fn undo(
     } else {
         false
     };
-    let total = entries.len() as u32;
-    let mut done = 0u32;
-    let mut failed = 0u32;
-    let mut errors = Vec::new();
-
-    for entry in entries {
-        if entry.state != UndoJournalState::Applied {
-            failed += 1;
-            let error = "UNDO_JOURNAL_NEEDS_REVIEW".to_string();
-            tracing::warn!(?entry, %error, "undo blocked by unresolved journal state");
-            if errors.len() < 100 {
-                errors.push(json!({
-                    "fromPath": entry.from_path,
-                    "toPath": entry.to_path,
-                    "error": error,
-                }));
-            }
-            let _ = app.emit(
-                "undo:progress",
-                json!({
-                    "sessionId": session_id,
-                    "done": done,
-                    "failed": failed,
-                    "processed": done + failed,
-                    "total": total,
-                }),
-            );
-            continue;
-        }
-        if let Err(error) = state.db.undo().mark_undoing(&entry) {
-            failed += 1;
-            let error = format!("UNDO_LOG_UPDATE_FAILED: {error}");
-            tracing::warn!(?entry, %error, "could not begin durable undo");
-            if errors.len() < 100 {
-                errors.push(json!({
-                    "fromPath": entry.from_path,
-                    "toPath": entry.to_path,
-                    "error": error,
-                }));
-            }
-            continue;
-        }
-        let source = entry.to_path.clone();
-        let destination = entry.from_path.clone();
-        let outcome = tokio::task::spawn_blocking(move || {
-            move_file(
-                Path::new(&source),
-                Path::new(&destination),
-                ConflictBehavior::Skip,
-            )
-        })
-        .await;
-
-        let error = match outcome {
-            Ok(Ok(MoveOutcome::Moved(_))) => {
-                match state.db.undo().restore_overwrite_backup(&entry) {
-                    Ok(()) => match state.db.undo().delete_entry(&entry) {
-                        Ok(()) => {
-                            done += 1;
-                            None
-                        }
-                        Err(error) => Some(format!("UNDO_LOG_UPDATE_FAILED: {error}")),
-                    },
-                    Err(error) => {
-                        let _ = state.db.undo().reconcile();
-                        Some(format!("UNDO_BACKUP_RESTORE_FAILED: {error}"))
-                    }
-                }
-            }
-            Ok(Ok(MoveOutcome::Skipped)) => {
-                let _ = state.db.undo().reconcile();
-                Some("UNDO_ORIGIN_ALREADY_EXISTS".to_string())
-            }
-            Ok(Err(error)) => {
-                let _ = state.db.undo().reconcile();
-                Some(format!("UNDO_MOVE_FAILED: {error}"))
-            }
-            Err(error) => {
-                let _ = state.db.undo().reconcile();
-                Some(format!("UNDO_TASK_FAILED: {error}"))
-            }
-        };
-        if let Some(error) = error {
-            failed += 1;
-            tracing::warn!(?entry, %error, "undo failed");
-            if errors.len() < 100 {
-                errors.push(json!({
-                    "fromPath": entry.from_path,
-                    "toPath": entry.to_path,
-                    "error": error,
-                }));
-            }
-        }
-
+    let result = crate::engine::undo::undo_entries(&state.db, entries, |progress| {
         let _ = app.emit(
             "undo:progress",
             json!({
                 "sessionId": session_id,
-                "done": done,
-                "failed": failed,
-                "processed": done + failed,
-                "total": total,
+                "done": progress.done,
+                "failed": progress.failed,
+                "processed": progress.processed,
+                "total": progress.total,
             }),
         );
-    }
+    })
+    .await;
 
     if watcher_was_running {
         // notify-debouncer uses 500 ms. Staying paused slightly longer than
@@ -278,15 +167,19 @@ pub async fn undo(
     }
 
     Ok(json!({
-        "success": failed == 0,
+        "success": result.failed == 0,
         "data": {
-            "done": done,
-            "failed": failed,
-            "total": total,
-            "retryable": failed > 0,
-            "errors": errors,
+            "done": result.done,
+            "failed": result.failed,
+            "total": result.total,
+            "retryable": result.failed > 0,
+            "errors": result.errors.into_iter().map(|error| json!({
+                "fromPath": error.from_path,
+                "toPath": error.to_path,
+                "error": error.error,
+            })).collect::<Vec<_>>(),
         },
-        "error": if failed > 0 { Some("UNDO_PARTIAL_FAILURE") } else { None },
+        "error": if result.failed > 0 { Some("UNDO_PARTIAL_FAILURE") } else { None },
     }))
 }
 

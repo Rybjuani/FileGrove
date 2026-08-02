@@ -23,12 +23,12 @@ Exit gate: all Rust and frontend tests pass with warnings denied.
 
 ## 0.3 — Automated real-filesystem coverage
 
-- [ ] Full organize/cancel/undo round-trip using disposable files
-- [ ] Multiple historical sessions undone newest-first
+- [x] Full organize/cancel/undo round-trip using disposable files
+- [x] Multiple historical sessions undone newest-first
 - [ ] Watcher event burst, pause/resume, and restart coverage
 - [ ] Recursive scans with exclusions, depth, flatten, and preserve modes
 - [ ] Duplicate policies and every conflict behavior across real files
-- [ ] Crash/restart reconciliation for pending moves and Undo
+- [x] Crash/restart reconciliation for pending moves and Undo
 
 Exit gate: repeatable integration suite without personal files or UI clicking.
 

@@ -35,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Apache 2.0 license, NOTICE, CREDITS, CONTRIBUTING
 - `docs/SPEC.md` — full behavioral specification
 - `docs/M1_ISSUES.md` — local validation checklist
+- Testable Undo core with disposable-filesystem regression coverage for
+  cancellation and multiple historical sessions
 
 ### Local-testing status
 

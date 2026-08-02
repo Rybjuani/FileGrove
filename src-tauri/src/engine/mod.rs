@@ -10,3 +10,4 @@ pub mod keyed_lock;
 pub mod matcher;
 pub mod planner;
 pub mod scanner;
+pub mod undo;
