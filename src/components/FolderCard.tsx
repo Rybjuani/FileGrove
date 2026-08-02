@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  CalendarClock,
+  AlertTriangle,
   Eye,
+  Files,
+  Folder as FolderIcon,
   Pause,
   Pencil,
   Play,
@@ -10,15 +12,17 @@ import {
   Square,
   Trash2,
   Sparkles,
+  Terminal,
   X,
 } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
 import { ipc } from '../ipc';
 import type {
+  Action,
   Folder,
   OrganizeProgress,
+  PlannedAction,
   PreviewResult,
-  Schedule,
   UndoSessionSummary,
 } from '../ipc/types';
 import { FolderAdvancedSettings } from './FolderAdvancedSettings';
@@ -29,25 +33,10 @@ interface Props {
   onNavigateToRules: () => void;
 }
 
-const DEFAULT_SCHEDULE: Schedule = {
-  enabled: false,
-  daysOfWeek: [1, 2, 3, 4, 5],
-  time: '09:00',
-};
-
-const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
-
 export function FolderCard({ folder, onNavigateToRules }: Props) {
   const { t, i18n } = useTranslation();
-  const {
-    rules,
-    removeFolder,
-    updateFolderName,
-    updateFolderMode,
-    updateFolderSchedule,
-    applyRecommendedRules,
-  } = useAppStore();
-  const schedule = folder.schedule ?? DEFAULT_SCHEDULE;
+  const { rules, removeFolder, updateFolderName, updateFolderMode, applyRecommendedRules } =
+    useAppStore();
   const [busy, setBusy] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [cancelRequested, setCancelRequested] = useState(false);
@@ -56,9 +45,6 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
   const [undoSessionCount, setUndoSessionCount] = useState(0);
   const [undoBusy, setUndoBusy] = useState(false);
   const [lastResult, setLastResult] = useState<string | null>(null);
-  const [nextRun, setNextRun] = useState<string | null>(null);
-  const [scheduleTime, setScheduleTime] = useState(schedule.time);
-  const [scheduleSaving, setScheduleSaving] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewResult, setPreviewResult] = useState<PreviewResult | null>(null);
@@ -109,31 +95,6 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
     };
   }, [folder.path]);
 
-  useEffect(() => {
-    setScheduleTime(schedule.time);
-  }, [schedule.time]);
-
-  useEffect(() => {
-    let disposed = false;
-    if (folder.mode !== 'scheduled' || !schedule.enabled) {
-      setNextRun(null);
-      return;
-    }
-    const loadNextRun = () => {
-      void ipc.folders.getNextRun(folder.id).then((res) => {
-        if (!disposed && res.success && res.data) {
-          setNextRun(res.data.nextRun);
-        }
-      });
-    };
-    loadNextRun();
-    const timer = window.setInterval(loadNextRun, 60_000);
-    return () => {
-      disposed = true;
-      window.clearInterval(timer);
-    };
-  }, [folder.id, folder.mode, folder.schedule, schedule.enabled]);
-
   const requestPreview = () =>
     folder.subfolders.enabled
       ? ipc.files.previewRecursive(folder.path)
@@ -146,9 +107,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
       (rule.action.type === 'delete' || rule.action.type === 'runCommand'),
   );
 
-  const confirmDangerousImpact = async (
-    context: 'manual' | 'auto' | 'scheduled',
-  ): Promise<boolean> => {
+  const confirmDangerousImpact = async (context: 'manual' | 'auto'): Promise<boolean> => {
     if (!hasAssignedDangerousRule) return true;
 
     const response = await requestPreview();
@@ -175,9 +134,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
     const key =
       context === 'manual'
         ? 'folderCard.preview.dangerousManualConfirm'
-        : context === 'auto'
-          ? 'folderCard.preview.dangerousAutoConfirm'
-          : 'folderCard.preview.dangerousScheduledConfirm';
+        : 'folderCard.preview.dangerousAutoConfirm';
     const examples = dangerous
       .slice(0, 10)
       .map((item) => `• ${item.file.name} — ${t(`rules.action.${item.action!.type}`)}`)
@@ -332,7 +289,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
     if (success) setLastResult(t('folderCard.recommended.ready'));
   };
 
-  const handleModeChange = async (mode: 'single' | 'auto' | 'scheduled') => {
+  const handleModeChange = async (mode: 'single' | 'auto') => {
     if (mode === folder.mode || modeChanging) return;
     setModeChanging(true);
     try {
@@ -340,43 +297,12 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
         if (!(await ensureRecursiveConfirmation())) return;
       }
       if (mode === 'auto' && !(await confirmDangerousImpact('auto'))) return;
-      if (mode === 'scheduled' && schedule.enabled) {
-        if (!(await confirmDangerousImpact('scheduled'))) return;
-        if (!(await ensureRecursiveConfirmation())) return;
-      }
       const changed = await updateFolderMode(folder.id, mode);
       if (!changed) {
         setLastResult(readableIpcError(useAppStore.getState().error ?? undefined, t));
       }
     } finally {
       setModeChanging(false);
-    }
-  };
-
-  const saveSchedule = async (nextSchedule: Schedule) => {
-    if (nextSchedule.enabled && !schedule.enabled) {
-      if (!(await confirmDangerousImpact('scheduled'))) return;
-      if (!(await ensureRecursiveConfirmation())) return;
-    }
-    setScheduleSaving(true);
-    const saved = await updateFolderSchedule(folder.id, nextSchedule);
-    if (!saved) setLastResult(readableIpcError(useAppStore.getState().error ?? undefined, t));
-    setScheduleSaving(false);
-  };
-
-  const toggleScheduleDay = async (day: number) => {
-    const daysOfWeek = schedule.daysOfWeek.includes(day)
-      ? schedule.daysOfWeek.filter((value) => value !== day)
-      : [...schedule.daysOfWeek, day].sort((a, b) => a - b);
-    if (daysOfWeek.length === 0) return;
-    await saveSchedule({ ...schedule, daysOfWeek });
-  };
-
-  const saveScheduleTime = async () => {
-    if (scheduleTime !== schedule.time && /^([01]\d|2[0-3]):[0-5]\d$/.test(scheduleTime)) {
-      await saveSchedule({ ...schedule, time: scheduleTime });
-    } else {
-      setScheduleTime(schedule.time);
     }
   };
 
@@ -396,27 +322,13 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
   const statusLabel =
     folder.mode === 'auto'
       ? t(`folderCard.watcher.${folder.watcherStatus}`)
-      : folder.mode === 'scheduled'
-        ? t(
-            schedule.enabled
-              ? 'folderCard.schedule.statusActive'
-              : 'folderCard.schedule.statusDisabled',
-          )
-        : t('folderCard.mode.single');
+      : t('folderCard.mode.single');
   const statusClass =
-    (folder.mode === 'auto' && folder.watcherStatus === 'running') ||
-    (folder.mode === 'scheduled' && schedule.enabled)
+    folder.mode === 'auto' && folder.watcherStatus === 'running'
       ? 'badge-success'
       : folder.mode === 'auto' && folder.watcherStatus === 'paused'
         ? 'badge-warning'
         : 'bg-primary-700/30 text-primary-400';
-  const formattedNextRun = nextRun
-    ? new Intl.DateTimeFormat(i18n.language, {
-        weekday: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-      }).format(new Date(nextRun))
-    : null;
   const formattedUndoAt = undoSession
     ? new Intl.DateTimeFormat(i18n.language, {
         dateStyle: 'short',
@@ -436,19 +348,12 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
         <span className={`badge shrink-0 ${statusClass}`}>{statusLabel}</span>
       </div>
 
-      <div
-        className={`grid gap-1 rounded-md border border-primary-800 bg-primary-950 p-1 text-xs ${
-          folder.mode === 'scheduled' ? 'grid-cols-3' : 'grid-cols-2'
-        }`}
-      >
-        {(folder.mode === 'scheduled'
-          ? (['auto', 'single', 'scheduled'] as const)
-          : (['auto', 'single'] as const)
-        ).map((mode) => (
+      <div className="grid grid-cols-2 gap-1 rounded-md border border-primary-800 bg-primary-950 p-1 text-xs">
+        {(['auto', 'single'] as const).map((mode) => (
           <button
             key={mode}
             onClick={() => void handleModeChange(mode)}
-            disabled={modeChanging || busy || undoBusy || scheduleSaving}
+            disabled={modeChanging || busy || undoBusy}
             className={`rounded px-2 py-1.5 transition-colors ${
               folder.mode === mode
                 ? 'bg-accent-600 text-white'
@@ -459,71 +364,6 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
           </button>
         ))}
       </div>
-
-      {folder.mode === 'scheduled' && (
-        <div className="space-y-3 rounded-md border border-primary-800 bg-primary-950/60 p-3">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-xs font-medium text-primary-200">
-              <CalendarClock size={14} />
-              {t('folderCard.schedule.title')}
-            </span>
-            <button
-              className={`rounded-full px-2 py-1 text-xs ${
-                schedule.enabled
-                  ? 'bg-accent-500/15 text-accent-400'
-                  : 'bg-primary-800 text-primary-400'
-              }`}
-              onClick={() => void saveSchedule({ ...schedule, enabled: !schedule.enabled })}
-              disabled={scheduleSaving || modeChanging}
-            >
-              {t(schedule.enabled ? 'folderCard.schedule.enabled' : 'folderCard.schedule.disabled')}
-            </button>
-          </div>
-
-          <div>
-            <p className="mb-2 text-xs text-primary-500">{t('folderCard.schedule.days')}</p>
-            <div className="grid grid-cols-7 gap-1">
-              {DAYS.map((day, index) => (
-                <button
-                  key={day}
-                  className={`rounded py-1 text-[11px] ${
-                    schedule.daysOfWeek.includes(index)
-                      ? 'bg-accent-600 text-white'
-                      : 'bg-primary-800 text-primary-400'
-                  }`}
-                  onClick={() => void toggleScheduleDay(index)}
-                  disabled={scheduleSaving || modeChanging}
-                  title={t(`folderCard.schedule.day.${day}.long`)}
-                >
-                  {t(`folderCard.schedule.day.${day}.short`)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <label className="text-xs text-primary-500" htmlFor={`schedule-${folder.id}`}>
-              {t('folderCard.schedule.time')}
-            </label>
-            <input
-              id={`schedule-${folder.id}`}
-              type="time"
-              className="input w-28 py-1"
-              value={scheduleTime}
-              onChange={(event) => setScheduleTime(event.target.value)}
-              onBlur={() => void saveScheduleTime()}
-              disabled={scheduleSaving || modeChanging}
-            />
-          </div>
-
-          <p className="text-xs text-primary-400">
-            {t('folderCard.schedule.nextRunLabel')}:&nbsp;
-            <span className="text-primary-200">
-              {formattedNextRun ?? t('folderCard.schedule.notScheduled')}
-            </span>
-          </p>
-        </div>
-      )}
 
       {folder.ruleIds.length === 0 ? (
         <button
@@ -666,8 +506,9 @@ function PreviewDialog({
 }) {
   const { t } = useTranslation();
   const actionable = result?.plan.filter((item) => item.action) ?? [];
-  const visibleActions = actionable.slice(0, 200);
   const unmatched = (result?.plan.length ?? 0) - actionable.length;
+  const groups = groupPreviewActions(actionable);
+  const visibleGroups = groups.slice(0, 24);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
@@ -686,15 +527,20 @@ function PreviewDialog({
           </button>
         </header>
 
-        <div className="max-h-[65vh] space-y-3 overflow-y-auto p-5">
+        <div className="max-h-[65vh] space-y-5 overflow-y-auto p-5">
           {loading && <p className="text-sm text-primary-400">{t('common.loading')}</p>}
           {error && <p className="rounded-md bg-red-500/10 p-3 text-sm text-red-300">{error}</p>}
           {result && (
             <>
-              <p className="text-sm text-primary-300">
-                {t('folderCard.preview.summary', { count: actionable.length })}
-                {unmatched > 0 && ` · ${t('folderCard.preview.unmatched', { count: unmatched })}`}
-              </p>
+              <div className="grid grid-cols-3 gap-2">
+                <PreviewStat
+                  value={actionable.length}
+                  label={t('folderCard.preview.willOrganize')}
+                  tone="accent"
+                />
+                <PreviewStat value={groups.length} label={t('folderCard.preview.categories')} />
+                <PreviewStat value={unmatched} label={t('folderCard.preview.unchanged')} />
+              </div>
               {result.stats.truncated && (
                 <p className="rounded-md bg-yellow-500/10 p-3 text-xs text-yellow-200">
                   {t('folderCard.preview.truncated')}
@@ -710,34 +556,26 @@ function PreviewDialog({
                   {t('folderCard.preview.noMatches')}
                 </p>
               ) : (
-                <div className="overflow-hidden rounded-md border border-primary-800">
-                  {visibleActions.map((item) => (
-                    <div
-                      key={item.file.path}
-                      className="grid gap-1 border-b border-primary-800 px-3 py-2 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_12rem]"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm text-primary-200" title={item.file.path}>
-                          {item.file.name}
-                        </p>
-                        <p className="truncate text-xs text-primary-500">{item.ruleName}</p>
-                      </div>
-                      <div className="text-xs text-primary-400 sm:text-right">
-                        <p>{t(`rules.action.${item.action!.type}`)}</p>
-                        {item.action?.type === 'move' && (
-                          <p className="truncate" title={item.action.destination}>
-                            {item.action.destination}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                <div className="space-y-3">
+                  <div>
+                    <h3 className="text-sm font-medium text-primary-200">
+                      {t('folderCard.preview.planTitle')}
+                    </h3>
+                    <p className="mt-1 text-xs text-primary-500">
+                      {t('folderCard.preview.planHint')}
+                    </p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {visibleGroups.map((group) => (
+                      <PreviewGroupCard key={group.key} group={group} />
+                    ))}
+                  </div>
                 </div>
               )}
-              {actionable.length > visibleActions.length && (
+              {groups.length > visibleGroups.length && (
                 <p className="text-xs text-primary-500">
-                  {t('folderCard.preview.remaining', {
-                    count: actionable.length - visibleActions.length,
+                  {t('folderCard.preview.groupsRemaining', {
+                    count: groups.length - visibleGroups.length,
                   })}
                 </p>
               )}
@@ -753,4 +591,130 @@ function PreviewDialog({
       </section>
     </div>
   );
+}
+
+interface PreviewGroup {
+  key: string;
+  ruleName: string;
+  action: Action;
+  files: PlannedAction['file'][];
+}
+
+function groupPreviewActions(items: PlannedAction[]): PreviewGroup[] {
+  const groups = new Map<string, PreviewGroup>();
+  for (const item of items) {
+    if (!item.action) continue;
+    const destination = item.action.type === 'move' ? item.action.destination : '';
+    const key = `${item.ruleId ?? item.ruleName ?? 'rule'}:${item.action.type}:${destination}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.files.push(item.file);
+    } else {
+      groups.set(key, {
+        key,
+        ruleName: item.ruleName ?? item.file.extension,
+        action: item.action,
+        files: [item.file],
+      });
+    }
+  }
+  return [...groups.values()].sort((left, right) => right.files.length - left.files.length);
+}
+
+function PreviewStat({
+  value,
+  label,
+  tone = 'neutral',
+}: {
+  value: number;
+  label: string;
+  tone?: 'accent' | 'neutral';
+}) {
+  return (
+    <div className="rounded-lg border border-primary-800 bg-primary-950/70 p-3 text-center">
+      <p
+        className={`text-xl font-semibold ${tone === 'accent' ? 'text-accent-400' : 'text-primary-200'}`}
+      >
+        {value.toLocaleString()}
+      </p>
+      <p className="mt-1 text-[11px] leading-tight text-primary-500">{label}</p>
+    </div>
+  );
+}
+
+function PreviewGroupCard({ group }: { group: PreviewGroup }) {
+  const { t } = useTranslation();
+  const dangerous = group.action.type === 'delete' || group.action.type === 'runCommand';
+  const Icon =
+    group.action.type === 'move'
+      ? FolderIcon
+      : group.action.type === 'trash'
+        ? Trash2
+        : group.action.type === 'delete'
+          ? AlertTriangle
+          : Terminal;
+  const destination =
+    group.action.type === 'move' ? friendlyDestination(group.action.destination) : null;
+  const examples = group.files.slice(0, 3);
+
+  return (
+    <article
+      className={`rounded-lg border p-3 ${
+        dangerous ? 'border-red-500/35 bg-red-500/5' : 'border-primary-800 bg-primary-950/45'
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <span
+          className={`rounded-lg p-2 ${
+            dangerous ? 'bg-red-500/10 text-red-300' : 'bg-accent-500/10 text-accent-400'
+          }`}
+        >
+          <Icon size={18} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-primary-200">{group.ruleName}</p>
+              <p className={`text-xs ${dangerous ? 'text-red-300' : 'text-primary-500'}`}>
+                {t(`rules.action.${group.action.type}`)}
+              </p>
+            </div>
+            <span className="badge bg-primary-800 text-primary-300">
+              {group.files.length.toLocaleString()}
+            </span>
+          </div>
+          {destination && (
+            <p
+              className="mt-2 flex items-center gap-1.5 truncate text-xs text-accent-300"
+              title={group.action.type === 'move' ? group.action.destination : undefined}
+            >
+              <FolderIcon size={12} /> {destination}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {examples.map((file) => (
+          <span
+            key={file.path}
+            className="inline-flex max-w-full items-center gap-1 rounded bg-primary-800/70 px-2 py-1 text-[11px] text-primary-400"
+            title={file.path}
+          >
+            <Files size={11} className="shrink-0" />
+            <span className="truncate">{file.name}</span>
+          </span>
+        ))}
+        {group.files.length > examples.length && (
+          <span className="px-1 py-1 text-[11px] text-primary-500">
+            {t('folderCard.preview.moreFiles', { count: group.files.length - examples.length })}
+          </span>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function friendlyDestination(destination: string): string {
+  const parts = destination.split(/[\\/]/).filter(Boolean);
+  return parts.slice(-2).join(' / ') || destination;
 }

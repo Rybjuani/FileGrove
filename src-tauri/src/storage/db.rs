@@ -145,5 +145,59 @@ mod tests {
             )
             .unwrap();
         assert_eq!(duplicate_behavior, "\"keepBoth\"");
+
+        let latest_migration: i64 = connection
+            .query_row(
+                "SELECT MAX(version) FROM refinery_schema_history",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(latest_migration, 5);
+    }
+
+    #[test]
+    fn scheduled_folders_become_inactive_manual_folders_without_losing_schedule_data() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("legacy-filegrove.db");
+        let database = Database::open(&path).unwrap();
+
+        {
+            let mut connection = database.conn.lock();
+            migrations::runner()
+                .set_target(refinery::Target::Version(4))
+                .run(&mut *connection)
+                .unwrap();
+            connection
+                .execute(
+                    "INSERT INTO folders (
+                        id, path, name, mode, rule_ids, watcher_status, created_at,
+                        subfolders, schedule, exclude_folders, exclude_patterns
+                     ) VALUES (
+                        'legacy-scheduled', '/tmp/legacy-scheduled', 'Legacy', 'scheduled',
+                        '[]', 'running', '2026-08-02T00:00:00Z', '{}',
+                        '{\"enabled\":true,\"daysOfWeek\":[1],\"time\":\"09:00\"}', '[]', '[]'
+                     )",
+                    [],
+                )
+                .unwrap();
+        }
+
+        database.run_migrations().unwrap();
+
+        let connection = database.conn.lock();
+        let (mode, watcher_status, schedule): (String, String, String) = connection
+            .query_row(
+                "SELECT mode, watcher_status, schedule FROM folders WHERE id='legacy-scheduled'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .unwrap();
+        assert_eq!(mode, "single");
+        assert_eq!(watcher_status, "stopped");
+        assert_eq!(
+            schedule,
+            "{\"enabled\":true,\"daysOfWeek\":[1],\"time\":\"09:00\"}"
+        );
     }
 }
