@@ -10,7 +10,7 @@ use anyhow::{anyhow, Result};
 use notify::{EventKind, Watcher};
 use notify_debouncer_full::{new_debouncer, DebouncedEvent, FileIdMap};
 use parking_lot::Mutex;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Runtime};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
@@ -56,7 +56,7 @@ impl WatcherService {
     }
 
     /// Restore watchers that were running or paused when the app closed.
-    pub fn init(&self, app: &AppHandle) -> Result<usize> {
+    pub fn init<R: Runtime>(&self, app: &AppHandle<R>) -> Result<usize> {
         let folders = self.db.folders().list()?;
         let mut restored = 0usize;
 
@@ -87,7 +87,7 @@ impl WatcherService {
     }
 
     /// Start watching a folder.
-    pub fn start_watching(&self, app: &AppHandle, folder: &Folder) -> Result<()> {
+    pub fn start_watching<R: Runtime>(&self, app: &AppHandle<R>, folder: &Folder) -> Result<()> {
         let folder_id = folder.id;
         {
             let map = self.watchers.lock();
@@ -272,13 +272,17 @@ impl WatcherService {
         Ok(())
     }
 
-    pub fn start_watching_and_catch_up(&self, app: &AppHandle, folder: &Folder) -> Result<()> {
+    pub fn start_watching_and_catch_up<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        folder: &Folder,
+    ) -> Result<()> {
         self.start_watching(app, folder)?;
         self.trigger_catch_up(app, folder);
         Ok(())
     }
 
-    pub fn stop_watching(&self, app: &AppHandle, folder_id: Uuid) -> Result<()> {
+    pub fn stop_watching<R: Runtime>(&self, app: &AppHandle<R>, folder_id: Uuid) -> Result<()> {
         if let Some(handle) = self.watchers.lock().remove(&folder_id) {
             handle.is_active.store(false, Ordering::Release);
             handle.is_paused.store(true, Ordering::Release);
@@ -293,7 +297,7 @@ impl WatcherService {
         Ok(())
     }
 
-    pub fn pause(&self, app: &AppHandle, folder_id: Uuid) -> Result<()> {
+    pub fn pause<R: Runtime>(&self, app: &AppHandle<R>, folder_id: Uuid) -> Result<()> {
         let map = self.watchers.lock();
         let Some(handle) = map.get(&folder_id) else {
             return Err(anyhow!("WATCHER_NOT_RUNNING"));
@@ -307,7 +311,7 @@ impl WatcherService {
         Ok(())
     }
 
-    pub fn resume(&self, app: &AppHandle, folder_id: Uuid) -> Result<()> {
+    pub fn resume<R: Runtime>(&self, app: &AppHandle<R>, folder_id: Uuid) -> Result<()> {
         let map = self.watchers.lock();
         let Some(handle) = map.get(&folder_id) else {
             return Err(anyhow!("WATCHER_NOT_RUNNING"));
@@ -325,7 +329,11 @@ impl WatcherService {
     /// Resume after undo without a catch-up scan. The undo operation already
     /// waited for debounced restore events to be discarded while paused; a
     /// catch-up here would immediately reapply the rule that was just undone.
-    pub fn resume_without_catch_up(&self, app: &AppHandle, folder_id: Uuid) -> Result<()> {
+    pub fn resume_without_catch_up<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        folder_id: Uuid,
+    ) -> Result<()> {
         let map = self.watchers.lock();
         let Some(handle) = map.get(&folder_id) else {
             return Err(anyhow!("WATCHER_NOT_RUNNING"));
@@ -337,7 +345,7 @@ impl WatcherService {
         Ok(())
     }
 
-    pub fn pause_all(&self, app: &AppHandle) {
+    pub fn pause_all<R: Runtime>(&self, app: &AppHandle<R>) {
         self.automation_paused.store(true, Ordering::Release);
         let map = self.watchers.lock();
         let folder_ids: Vec<Uuid> = map.keys().copied().collect();
@@ -356,7 +364,7 @@ impl WatcherService {
         }
     }
 
-    pub fn resume_all(&self, app: &AppHandle) {
+    pub fn resume_all<R: Runtime>(&self, app: &AppHandle<R>) {
         self.automation_paused.store(false, Ordering::Release);
         let map = self.watchers.lock();
         let folder_ids: Vec<Uuid> = map.keys().copied().collect();
@@ -408,19 +416,24 @@ impl WatcherService {
         tracing::info!("watcher shutdown: stopped {} watcher(s)", count);
     }
 
-    fn update_status(&self, app: &AppHandle, folder_id: Uuid, status: WatcherStatus) {
+    fn update_status<R: Runtime>(
+        &self,
+        app: &AppHandle<R>,
+        folder_id: Uuid,
+        status: WatcherStatus,
+    ) {
         let _ = self.db.folders().update_status(folder_id, status);
         self.emit_status(app, folder_id, status);
     }
 
-    fn emit_status(&self, app: &AppHandle, folder_id: Uuid, status: WatcherStatus) {
+    fn emit_status<R: Runtime>(&self, app: &AppHandle<R>, folder_id: Uuid, status: WatcherStatus) {
         let _ = app.emit(
             "watcher:status-changed",
             serde_json::json!({ "folderId": folder_id, "status": status.as_str() }),
         );
     }
 
-    fn trigger_catch_up(&self, app: &AppHandle, folder: &Folder) {
+    fn trigger_catch_up<R: Runtime>(&self, app: &AppHandle<R>, folder: &Folder) {
         let (is_active, is_paused) = {
             let map = self.watchers.lock();
             let Some(handle) = map.get(&folder.id) else {
@@ -470,8 +483,8 @@ struct WatcherRunGate<'a> {
     is_paused: &'a AtomicBool,
 }
 
-async fn organize_with_retry(
-    app: &AppHandle,
+async fn organize_with_retry<R: Runtime>(
+    app: &AppHandle<R>,
     db: &Database,
     cancellations: &CancellationRegistry,
     folder_path: &str,

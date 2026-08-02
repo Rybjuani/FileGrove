@@ -16,6 +16,20 @@ mod storage;
 mod tray;
 mod watcher;
 
+/// Narrow public surface used by black-box integration tests. Keeping these
+/// re-exports here lets the tests boot the production watcher without making
+/// the rest of the application's internal modules part of its public API.
+#[cfg(not(test))]
+#[doc(hidden)]
+pub mod integration_test_support {
+    pub use crate::domain::{
+        Action, Condition, Folder, FolderMode, Rule, SubfolderConfig, WatcherStatus,
+    };
+    pub use crate::engine::cancellation::CancellationRegistry;
+    pub use crate::storage::Database;
+    pub use crate::watcher::WatcherService;
+}
+
 #[cfg(not(test))]
 use std::sync::Arc;
 

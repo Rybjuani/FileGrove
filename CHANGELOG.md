@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/M1_ISSUES.md` — local validation checklist
 - Testable Undo core with disposable-filesystem regression coverage for
   cancellation and multiple historical sessions
+- Black-box watcher integration tests for event bursts, pause/resume catch-up,
+  and active or paused service restoration after restart
 
 ### Local-testing status
 

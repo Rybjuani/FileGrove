@@ -10,7 +10,7 @@ npm run tauri:dev
 ```
 
 Run those commands from the local FileGrove repository. The project is still in
-local testing and is not published on GitHub yet.
+private release preparation and does not publish end-user releases yet.
 
 For prerequisites (Rust, Node 20+, system libs), see the
 [Tauri 2 getting started guide](https://tauri.app/v2/guides/getting-started/prerequisites/).
@@ -19,10 +19,11 @@ For prerequisites (Rust, Node 20+, system libs), see the
 
 See `docs/SPEC.md` §3.3 for the full layout. The short version:
 
-- `src-tauri/` — Rust backend (rules, watcher, scheduler, storage, IPC)
+- `src-tauri/` — Rust backend (rules, watcher, storage, IPC)
 - `src/` — React frontend (pages, components, stores, i18n)
 - `docs/` — Specs and architecture docs
-- `tests/` — Unit / integration / E2E tests
+- `tests/unit/` — Frontend unit tests
+- `src-tauri/tests/` — Black-box Rust integration tests
 
 ## Development workflow
 
@@ -50,10 +51,12 @@ See `docs/SPEC.md` §3.3 for the full layout. The short version:
 
 ## Tests
 
-- **Unit** (`tests/unit/`): fast, isolated, run on every push.
-- **Integration** (`tests/integration/`): exercise the backend via
-  Tauri's test harness.
-- **E2E** (`tests/e2e/`): Playwright driving the full app.
+- **Frontend unit** (`tests/unit/`): fast, isolated, run on every push.
+- **Rust unit** (`src-tauri/src/**`): engine and persistence behavior beside
+  the code it covers.
+- **Rust integration** (`src-tauri/tests/`): exercise production services via
+  Tauri's headless test harness and disposable directories.
+- **E2E**: Playwright coverage will be added before the release candidate.
 
 Aim for at least one test per IPC handler and per rule-engine branch.
 

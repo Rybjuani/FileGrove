@@ -268,7 +268,7 @@ fn row_to_folder(row: &rusqlite::Row<'_>) -> rusqlite::Result<Folder> {
     let id = Uuid::parse_str(&id_str).map_err(|e| {
         rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e))
     })?;
-    let mode = FolderMode::from_str(&mode_str).unwrap_or(FolderMode::Single);
+    let mode = mode_str.parse().unwrap_or(FolderMode::Single);
     let rule_ids: Vec<Uuid> = serde_json::from_str(&rule_ids_str).unwrap_or_default();
     let watcher_status = match status_str.as_str() {
         "running" => WatcherStatus::Running,

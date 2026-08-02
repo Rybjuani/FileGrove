@@ -149,9 +149,9 @@ pub async fn update_mode(
     mode: String,
     disable_subfolders: Option<bool>,
 ) -> Result<Value, String> {
-    let new_mode = match FolderMode::from_str(&mode) {
-        Some(m) => m,
-        None => return Ok(json!({ "success": false, "error": "INVALID_MODE" })),
+    let new_mode = match mode.parse::<FolderMode>() {
+        Ok(mode) => mode,
+        Err(_) => return Ok(json!({ "success": false, "error": "INVALID_MODE" })),
     };
     match state.db.folders().get(id) {
         Ok(Some(mut folder)) => {

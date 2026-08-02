@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use serde_json::{json, Value};
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 use tauri_plugin_notification::NotificationExt;
 use uuid::Uuid;
 
@@ -60,8 +60,8 @@ fn scan_response(result: Result<ConfiguredScan, String>) -> Value {
     }
 }
 
-async fn configured_scan(
-    app: Option<&AppHandle>,
+async fn configured_scan<R: Runtime>(
+    app: Option<&AppHandle<R>>,
     db: &Database,
     folder_path: &str,
     recursive_requested: bool,
@@ -155,8 +155,8 @@ pub async fn preview_recursive(
     Ok(preview_inner(&app, &state.db, &folder_path, true).await)
 }
 
-async fn preview_inner(
-    app: &AppHandle,
+async fn preview_inner<R: Runtime>(
+    app: &AppHandle<R>,
     db: &Database,
     folder_path: &str,
     recursive: bool,
@@ -204,8 +204,8 @@ pub async fn organize_recursive(
     Ok(organize_inner(&app, &state.db, &state.cancellations, &folder_path, true).await)
 }
 
-pub async fn organize_inner(
-    app: &AppHandle,
+pub async fn organize_inner<R: Runtime>(
+    app: &AppHandle<R>,
     db: &Database,
     cancellations: &CancellationRegistry,
     folder_path: &str,
@@ -217,8 +217,8 @@ pub async fn organize_inner(
 /// Background-only entry point. The pause flag is checked before and after
 /// session registration: if pause races the first check, either the second
 /// check rejects the run or the pause operation can see and cancel its session.
-pub async fn organize_automated_inner(
-    app: &AppHandle,
+pub async fn organize_automated_inner<R: Runtime>(
+    app: &AppHandle<R>,
     db: &Database,
     cancellations: &CancellationRegistry,
     folder_path: &str,
@@ -236,8 +236,8 @@ pub async fn organize_automated_inner(
     .await
 }
 
-async fn organize_inner_with_gate(
-    app: &AppHandle,
+async fn organize_inner_with_gate<R: Runtime>(
+    app: &AppHandle<R>,
     db: &Database,
     cancellations: &CancellationRegistry,
     folder_path: &str,
@@ -351,8 +351,8 @@ async fn organize_inner_with_gate(
 /// filesystem event must never trigger a full rescan of the watched folder;
 /// full scans are reserved for explicit start/resume catch-up and manual or
 /// automatic runs.
-pub async fn organize_automated_paths_inner(
-    app: &AppHandle,
+pub async fn organize_automated_paths_inner<R: Runtime>(
+    app: &AppHandle<R>,
     db: &Database,
     cancellations: &CancellationRegistry,
     folder_path: &str,
@@ -370,8 +370,8 @@ pub async fn organize_automated_paths_inner(
     .await
 }
 
-async fn organize_paths_inner_with_gate(
-    app: &AppHandle,
+async fn organize_paths_inner_with_gate<R: Runtime>(
+    app: &AppHandle<R>,
     db: &Database,
     cancellations: &CancellationRegistry,
     folder_path: &str,
@@ -511,8 +511,8 @@ fn automation_paused_response() -> Value {
 }
 
 #[allow(clippy::too_many_arguments)]
-async fn execute_plan(
-    app: &AppHandle,
+async fn execute_plan<R: Runtime>(
+    app: &AppHandle<R>,
     db: &Database,
     cancellation: &CancellationToken,
     session_id: Uuid,
@@ -621,7 +621,12 @@ async fn execute_plan(
     })
 }
 
-fn notify_background_completion(app: &AppHandle, db: &Database, done: u32, failed: u32) {
+fn notify_background_completion<R: Runtime>(
+    app: &AppHandle<R>,
+    db: &Database,
+    done: u32,
+    failed: u32,
+) {
     if !db.settings().get_notifications() {
         return;
     }
@@ -652,8 +657,8 @@ fn notify_background_completion(app: &AppHandle, db: &Database, done: u32, faile
     }
 }
 
-pub fn report_background_error(
-    app: &AppHandle,
+pub fn report_background_error<R: Runtime>(
+    app: &AppHandle<R>,
     db: &Database,
     folder_path: &str,
     trigger: &str,
@@ -686,7 +691,7 @@ pub fn report_background_error(
     }
 }
 
-fn app_is_in_background(app: &AppHandle) -> bool {
+fn app_is_in_background<R: Runtime>(app: &AppHandle<R>) -> bool {
     app.get_webview_window("main")
         .map(|window| {
             !window.is_visible().unwrap_or(false) || window.is_minimized().unwrap_or(false)
@@ -714,7 +719,12 @@ fn canonical_folder_key(path: &Path) -> String {
     crate::paths::safety::canonical_path_key(path)
 }
 
-fn emit_organize_error(app: &AppHandle, session_id: Uuid, folder_path: &str, error: &str) {
+fn emit_organize_error<R: Runtime>(
+    app: &AppHandle<R>,
+    session_id: Uuid,
+    folder_path: &str,
+    error: &str,
+) {
     let _ = app.emit(
         "organize:done",
         json!({

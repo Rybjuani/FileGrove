@@ -55,18 +55,22 @@ pub enum FolderMode {
 }
 
 impl FolderMode {
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s {
-            "single" => Some(Self::Single),
-            "auto" => Some(Self::Auto),
-            _ => None,
-        }
-    }
-
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Single => "single",
             Self::Auto => "auto",
+        }
+    }
+}
+
+impl std::str::FromStr for FolderMode {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "single" => Ok(Self::Single),
+            "auto" => Ok(Self::Auto),
+            _ => Err("invalid folder mode"),
         }
     }
 }

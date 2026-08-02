@@ -25,7 +25,7 @@ Exit gate: all Rust and frontend tests pass with warnings denied.
 
 - [x] Full organize/cancel/undo round-trip using disposable files
 - [x] Multiple historical sessions undone newest-first
-- [ ] Watcher event burst, pause/resume, and restart coverage
+- [x] Watcher event burst, pause/resume, and restart coverage
 - [ ] Recursive scans with exclusions, depth, flatten, and preserve modes
 - [ ] Duplicate policies and every conflict behavior across real files
 - [x] Crash/restart reconciliation for pending moves and Undo
