@@ -7,7 +7,7 @@ export default defineConfig(async () => ({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(import.meta.dirname, './src'),
     },
   },
   // Tauri expects a fixed port; if that's not available, it will fall back
@@ -24,7 +24,6 @@ export default defineConfig(async () => ({
   envPrefix: ['VITE_', 'TAURI_'],
   build: {
     target: 'es2022',
-    minify: 'esbuild',
     sourcemap: false,
   },
   test: {
