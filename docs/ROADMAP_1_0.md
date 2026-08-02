@@ -27,7 +27,7 @@ Exit gate: all Rust and frontend tests pass with warnings denied.
 - [x] Multiple historical sessions undone newest-first
 - [x] Watcher event burst, pause/resume, and restart coverage
 - [x] Recursive scans with exclusions, depth, flatten, and preserve modes
-- [ ] Duplicate policies and every conflict behavior across real files
+- [x] Duplicate policies and every conflict behavior across real files
 - [x] Crash/restart reconciliation for pending moves and Undo
 
 Exit gate: repeatable integration suite without personal files or UI clicking.

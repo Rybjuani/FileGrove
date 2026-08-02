@@ -41,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and active or paused service restoration after restart
 - Real recursive organization coverage for flattened and preserved layouts,
   maximum depth, and excluded folders
+- Real-file safety matrix for rename, skip, overwrite, keep-both, Trash, and
+  explicitly enabled permanent duplicate deletion
 
 ### Local-testing status
 

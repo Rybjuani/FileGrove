@@ -22,11 +22,17 @@ mod watcher;
 #[cfg(not(test))]
 #[doc(hidden)]
 pub mod integration_test_support {
+    pub use crate::domain::activity::ActivityType;
     pub use crate::domain::{
         Action, Condition, DestinationMode, Folder, FolderMode, MaxDepth, Rule, SubfolderConfig,
         WatcherStatus,
     };
     pub use crate::engine::cancellation::CancellationRegistry;
+    pub use crate::engine::executor::{ActionResult, ConflictBehavior, Organizer};
+    pub use crate::engine::file_ops::DuplicateBehavior;
+    pub use crate::engine::matcher::FileItem;
+    pub use crate::engine::undo::undo_entries;
+    pub use crate::storage::activity::ActivityFilters;
     pub use crate::storage::Database;
     pub use crate::watcher::WatcherService;
 }

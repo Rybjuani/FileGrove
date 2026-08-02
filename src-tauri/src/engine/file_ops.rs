@@ -23,22 +23,28 @@ pub enum DuplicateBehavior {
     Delete,
 }
 
-impl DuplicateBehavior {
-    pub fn from_str(value: &str) -> Self {
+impl std::str::FromStr for DuplicateBehavior {
+    type Err = &'static str;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
-            "trash" => Self::Trash,
-            "delete" => Self::Delete,
-            _ => Self::KeepBoth,
+            "keepBoth" => Ok(Self::KeepBoth),
+            "trash" => Ok(Self::Trash),
+            "delete" => Ok(Self::Delete),
+            _ => Err("invalid duplicate behavior"),
         }
     }
 }
 
-impl ConflictBehavior {
-    pub fn from_str(value: &str) -> Self {
+impl std::str::FromStr for ConflictBehavior {
+    type Err = &'static str;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
-            "overwrite" => Self::Overwrite,
-            "skip" => Self::Skip,
-            _ => Self::Rename,
+            "rename" => Ok(Self::Rename),
+            "overwrite" => Ok(Self::Overwrite),
+            "skip" => Ok(Self::Skip),
+            _ => Err("invalid conflict behavior"),
         }
     }
 }

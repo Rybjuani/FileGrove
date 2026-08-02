@@ -521,12 +521,16 @@ async fn execute_plan<R: Runtime>(
     plan: Vec<PlannedAction>,
     preserve_relative_structure: bool,
 ) -> Value {
-    let conflict_behavior = crate::engine::executor::ConflictBehavior::from_str(
-        &db.settings().get_conflict_behavior_str(),
-    );
-    let duplicate_behavior = crate::engine::file_ops::DuplicateBehavior::from_str(
-        &db.settings().get_duplicate_behavior_str(),
-    );
+    let conflict_behavior = db
+        .settings()
+        .get_conflict_behavior_str()
+        .parse()
+        .unwrap_or(crate::engine::executor::ConflictBehavior::Rename);
+    let duplicate_behavior = db
+        .settings()
+        .get_duplicate_behavior_str()
+        .parse()
+        .unwrap_or(crate::engine::file_ops::DuplicateBehavior::KeepBoth);
     let scan_root = PathBuf::from(folder_path);
     let mut done = 0u32;
     let mut failed = 0u32;
