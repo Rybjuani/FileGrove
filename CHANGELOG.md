@@ -43,6 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   maximum depth, and excluded folders
 - Real-file safety matrix for rename, skip, overwrite, keep-both, Trash, and
   explicitly enabled permanent duplicate deletion
+- Simplified custom-rule flow with an automatically suggested managed folder,
+  safe defaults, and progressively disclosed advanced actions
 
 ### Local-testing status
 

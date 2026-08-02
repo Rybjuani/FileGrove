@@ -86,6 +86,17 @@ export function isValidDestination(value: string): boolean {
   return isAbsoluteDestination(value) || isManagedDestination(value);
 }
 
+export function suggestManagedDestination(ruleName: string): string {
+  const suggestion = ruleName
+    .replace(/\{[^}]*\}/g, ' ')
+    .replace(/[\0/\\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^\.+|\.+$/g, '')
+    .trim();
+  return suggestion === '.' || suggestion === '..' ? '' : suggestion;
+}
+
 export function isDangerousAction(action: Action): boolean {
   return action.type === 'delete' || action.type === 'runCommand';
 }

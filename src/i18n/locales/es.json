@@ -304,6 +304,7 @@
     "enable": "Activar",
     "enableDangerousConfirm": "¿Activar la regla potencialmente destructiva «{{name}}»? Está asignada a {{count}} carpeta(s) automática(s) activa(s) y puede ejecutarse de inmediato: {{folders}}",
     "enabledOnSave": "Activar esta regla",
+    "hideAdvanced": "Ocultar opciones avanzadas",
     "form": {
       "conditionLabels": {
         "extension": "Archivos con extensión",
@@ -344,8 +345,10 @@
     "quick": "Rápida",
     "ruleName": "Nombre de la regla",
     "saveChanges": "Guardar cambios",
+    "safeDefault": "Opción segura: FileGrove moverá los archivos a una carpeta creada automáticamente dentro de cada carpeta organizada.",
     "searchPlaceholder": "Buscar reglas…",
     "selectDestination": "Seleccionar destino",
+    "showAdvanced": "Personalizar opciones",
     "subtitle": "Gestiona las reglas de organización. Asigna reglas a carpetas desde el Panel.",
     "templatesDesc": "Añade una tarea lista para usar. FileGrove creará su carpeta de destino automáticamente.",
     "templatesTitle": "Plantillas rápidas",

@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { FolderOpen, Play, Plus, Trash2, X } from 'lucide-react';
+import { FolderOpen, Play, Plus, Settings2, Trash2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ipc } from '../ipc';
 import type { Action, CommandTestResult, Condition, Rule } from '../ipc/types';
@@ -10,6 +10,7 @@ import {
   isValidDestination,
   isValidCondition,
   parseConditionValue,
+  suggestManagedDestination,
 } from '../lib/rules';
 import { useAppStore } from '../stores/useAppStore';
 
@@ -52,6 +53,8 @@ export function RuleEditor({ rule, nextOrder, createAsNew = false, onClose }: Pr
       ? { ...rule.action, timeoutMs: rule.action.timeoutMs ?? 30_000 }
       : (rule?.action ?? { type: 'move', destination: '' }),
   );
+  const [destinationCustomized, setDestinationCustomized] = useState(Boolean(rule));
+  const [advancedOpen, setAdvancedOpen] = useState(Boolean(rule && rule.action.type !== 'move'));
   const [warningAccepted, setWarningAccepted] = useState(false);
   const [deleteAccepted, setDeleteAccepted] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -70,10 +73,19 @@ export function RuleEditor({ rule, nextOrder, createAsNew = false, onClose }: Pr
   const setActionType = (type: Action['type']) => {
     setTestResult(null);
     setTestError(null);
-    if (type === 'move') setAction({ type, destination: '' });
-    else if (type === 'runCommand') {
+    if (type === 'move') {
+      setDestinationCustomized(false);
+      setAction({ type, destination: suggestManagedDestination(name) });
+    } else if (type === 'runCommand') {
       setAction({ type, command: '', timeoutMs: 30_000, rerunAlways: false });
     } else setAction({ type });
+  };
+
+  const updateName = (nextName: string) => {
+    setName(nextName);
+    if (!destinationCustomized && action.type === 'move') {
+      setAction({ type: 'move', destination: suggestManagedDestination(nextName) });
+    }
   };
 
   const updateCondition = (index: number, next: Condition) => {
@@ -85,6 +97,7 @@ export function RuleEditor({ rule, nextOrder, createAsNew = false, onClose }: Pr
   const chooseDestination = async () => {
     const response = await ipc.folders.selectDestination();
     if (response.success && response.data) {
+      setDestinationCustomized(true);
       setAction({ type: 'move', destination: response.data });
     } else if (response.error !== 'USER_CANCELED_FOLDER_SELECT') {
       setFormError(readableIpcError(response.error, t));
@@ -175,7 +188,7 @@ export function RuleEditor({ rule, nextOrder, createAsNew = false, onClose }: Pr
               className="input"
               value={name}
               maxLength={100}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => updateName(event.target.value)}
               placeholder={t('rules.form.namePlaceholder')}
               autoFocus
             />
@@ -242,6 +255,7 @@ export function RuleEditor({ rule, nextOrder, createAsNew = false, onClose }: Pr
                     )
                   }
                   aria-label={t('rules.form.removeCondition')}
+                  disabled={conditions.length === 1}
                 >
                   <Trash2 size={15} />
                 </button>
@@ -250,18 +264,36 @@ export function RuleEditor({ rule, nextOrder, createAsNew = false, onClose }: Pr
           </section>
 
           <section className="space-y-3">
-            <h3 className="text-sm font-medium text-primary-200">{t('rules.action.label')}</h3>
-            <select
-              className="input"
-              value={action.type}
-              onChange={(event) => setActionType(event.target.value as Action['type'])}
-            >
-              {(['move', 'trash', 'delete', 'runCommand'] as const).map((type) => (
-                <option key={type} value={type}>
-                  {t(`rules.action.${type}`)}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-medium text-primary-200">{t('rules.action.label')}</h3>
+              {action.type === 'move' && (
+                <button
+                  type="button"
+                  className="btn-ghost text-xs"
+                  onClick={() => setAdvancedOpen((current) => !current)}
+                >
+                  <Settings2 size={14} />
+                  {t(advancedOpen ? 'rules.hideAdvanced' : 'rules.showAdvanced')}
+                </button>
+              )}
+            </div>
+            {advancedOpen ? (
+              <select
+                className="input"
+                value={action.type}
+                onChange={(event) => setActionType(event.target.value as Action['type'])}
+              >
+                {(['move', 'trash', 'delete', 'runCommand'] as const).map((type) => (
+                  <option key={type} value={type}>
+                    {t(`rules.action.${type}`)}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="rounded-md bg-accent-500/10 p-3 text-xs text-accent-200">
+                {t('rules.safeDefault')}
+              </p>
+            )}
 
             {action.type === 'move' && (
               <div className="space-y-3">
@@ -271,36 +303,45 @@ export function RuleEditor({ rule, nextOrder, createAsNew = false, onClose }: Pr
                     <input
                       className="input min-w-0 flex-1 font-mono text-xs"
                       value={action.destination}
-                      onChange={(event) =>
-                        setAction({ type: 'move', destination: event.target.value })
-                      }
+                      onChange={(event) => {
+                        setDestinationCustomized(true);
+                        setAction({ type: 'move', destination: event.target.value });
+                      }}
                       placeholder={t('rules.destinationPlaceholder')}
                     />
-                    <button type="button" className="btn-secondary" onClick={chooseDestination}>
-                      <FolderOpen size={15} /> {t('rules.selectDestination')}
-                    </button>
+                    {advancedOpen && (
+                      <button type="button" className="btn-secondary" onClick={chooseDestination}>
+                        <FolderOpen size={15} /> {t('rules.selectDestination')}
+                      </button>
+                    )}
                   </div>
                   <span className="block text-xs text-primary-500">
                     {t('rules.destinationManagedHint')}
                   </span>
                 </label>
-                <div>
-                  <p className="mb-2 text-xs text-primary-500">{t('rules.tokens.help')}</p>
-                  <div className="flex flex-wrap gap-1">
-                    {DESTINATION_TOKENS.map((token) => (
-                      <button
-                        key={token}
-                        type="button"
-                        className="rounded bg-primary-800 px-2 py-1 font-mono text-[11px] text-primary-300"
-                        onClick={() =>
-                          setAction({ type: 'move', destination: `${action.destination}${token}` })
-                        }
-                      >
-                        {token}
-                      </button>
-                    ))}
+                {advancedOpen && (
+                  <div>
+                    <p className="mb-2 text-xs text-primary-500">{t('rules.tokens.help')}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {DESTINATION_TOKENS.map((token) => (
+                        <button
+                          key={token}
+                          type="button"
+                          className="rounded bg-primary-800 px-2 py-1 font-mono text-[11px] text-primary-300"
+                          onClick={() => {
+                            setDestinationCustomized(true);
+                            setAction({
+                              type: 'move',
+                              destination: `${action.destination}${token}`,
+                            });
+                          }}
+                        >
+                          {token}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 

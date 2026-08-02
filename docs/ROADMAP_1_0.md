@@ -36,7 +36,7 @@ Exit gate: repeatable integration suite without personal files or UI clicking.
 
 - [x] One-click recommended categories
 - [x] Visual grouped preview instead of a technical path table
-- [ ] Simplified custom-rule builder with friendly defaults
+- [x] Simplified custom-rule builder with friendly defaults
 - [ ] First-run explanation focused on safety and Automatic mode
 - [ ] Compact dashboard hierarchy and clearer progress/Undo feedback
 - [ ] Accessibility pass for keyboard, focus, contrast, and screen readers

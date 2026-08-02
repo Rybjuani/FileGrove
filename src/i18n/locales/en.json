@@ -304,6 +304,7 @@
     "enable": "Enable",
     "enableDangerousConfirm": "Enable the potentially destructive rule “{{name}}”? It is assigned to {{count}} active automatic folder(s) and can run immediately: {{folders}}",
     "enabledOnSave": "Enable this rule",
+    "hideAdvanced": "Hide advanced options",
     "form": {
       "conditionLabels": {
         "extension": "Extension is one of",
@@ -344,8 +345,10 @@
     "quick": "Quick",
     "ruleName": "Rule name",
     "saveChanges": "Save changes",
+    "safeDefault": "Safe default: FileGrove moves files into a folder it creates automatically inside each organized folder.",
     "searchPlaceholder": "Search rules…",
     "selectDestination": "Select destination",
+    "showAdvanced": "Customize options",
     "subtitle": "Manage your organization rules. Assign rules to folders from the Dashboard.",
     "templatesDesc": "Add a ready-to-use task. FileGrove creates its destination folder automatically.",
     "templatesTitle": "Quick templates",

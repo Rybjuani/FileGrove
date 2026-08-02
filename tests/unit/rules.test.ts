@@ -6,6 +6,7 @@ import {
   isValidCondition,
   isValidRule,
   parseConditionValue,
+  suggestManagedDestination,
 } from '../../src/lib/rules';
 
 describe('rule form helpers', () => {
@@ -29,6 +30,12 @@ describe('rule form helpers', () => {
     expect(isManagedDestination('Images/{year}/{month}')).toBe(true);
     expect(isManagedDestination('../Images')).toBe(false);
     expect(isManagedDestination('{year}/Images')).toBe(false);
+  });
+
+  it('suggests one safe managed folder from a friendly rule name', () => {
+    expect(suggestManagedDestination('  Fotos 2026  ')).toBe('Fotos 2026');
+    expect(suggestManagedDestination('Fotos/Verano {year}')).toBe('Fotos Verano');
+    expect(suggestManagedDestination('..')).toBe('');
   });
 
   it('validates a complete move rule', () => {
