@@ -261,6 +261,27 @@
     "installers": "Instaladores",
     "videos": "Vídeos"
   },
+  "onboarding": {
+    "intro": "FileGrove comienza en modo Manual. Tú mantienes el control y decides cuándo una carpeta está lista para organizarse en modo Automático.",
+    "saving": "Preparando…",
+    "start": "Empezar de forma segura",
+    "steps": {
+      "automatic": {
+        "body": "Automático queda atento a los archivos nuevos. Puedes pausarlo en cualquier momento.",
+        "title": "Activa Automático cuando estés listo"
+      },
+      "folder": {
+        "body": "FileGrove solo trabaja dentro de las carpetas que eliges. Las categorías recomendadas crean allí sus propios destinos.",
+        "title": "Elige una carpeta"
+      },
+      "preview": {
+        "body": "Usa Vista previa para ver grupos claros de archivos y sus destinos antes de organizar.",
+        "title": "Mira antes de cambiar nada"
+      }
+    },
+    "title": "Tus archivos, siempre bajo tu control",
+    "undoNote": "Seguro por defecto: los movimientos quedan registrados, los conflictos de nombre protegen tus archivos y Deshacer permite restaurar lotes anteriores, uno por uno."
+  },
   "rules": {
     "action": {
       "command": "Comando",

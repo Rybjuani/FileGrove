@@ -261,6 +261,27 @@
     "installers": "Installers",
     "videos": "Videos"
   },
+  "onboarding": {
+    "intro": "FileGrove starts in Manual mode. You stay in control and choose when a folder is ready for Automatic organization.",
+    "saving": "Preparing…",
+    "start": "Start safely",
+    "steps": {
+      "automatic": {
+        "body": "Automatic keeps watching for new files. You can pause it at any time.",
+        "title": "Turn on Automatic when ready"
+      },
+      "folder": {
+        "body": "FileGrove works only inside folders you select. Recommended categories create their own destinations there.",
+        "title": "Choose one folder"
+      },
+      "preview": {
+        "body": "Use Preview to see clear groups of files and their destinations before organizing.",
+        "title": "Preview before changing anything"
+      }
+    },
+    "title": "Your files, always under your control",
+    "undoNote": "Safe by default: moves are recorded, name conflicts keep files protected, and Undo can restore earlier batches one at a time."
+  },
   "rules": {
     "action": {
       "command": "Command",

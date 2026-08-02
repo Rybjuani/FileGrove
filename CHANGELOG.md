@@ -45,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   explicitly enabled permanent duplicate deletion
 - Simplified custom-rule flow with an automatically suggested managed folder,
   safe defaults, and progressively disclosed advanced actions
+- Persistent first-run welcome that explains the safe Manual-to-Automatic
+  workflow, recommended categories, Preview, pause, and historical Undo
 
 ### Local-testing status
 

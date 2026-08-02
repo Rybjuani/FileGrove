@@ -12,13 +12,15 @@ import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { readableIpcError } from './lib/errors';
 import { ipc } from './ipc';
+import { OnboardingDialog } from './components/OnboardingDialog';
 
 export type Page = 'dashboard' | 'rules' | 'history' | 'settings' | 'about';
 
 export default function App() {
   const { t } = useTranslation();
   const [page, setPage] = useState<Page>('dashboard');
-  const { settings, loadSettings, error, clearError, reportError } = useAppStore();
+  const [onboardingSaving, setOnboardingSaving] = useState(false);
+  const { settings, loadSettings, updateSettings, error, clearError, reportError } = useAppStore();
   useTheme(settings?.theme);
 
   useEffect(() => {
@@ -45,6 +47,12 @@ export default function App() {
       unlisten?.();
     };
   }, [reportError]);
+
+  const completeOnboarding = async () => {
+    setOnboardingSaving(true);
+    await updateSettings({ onboardingCompleted: true });
+    setOnboardingSaving(false);
+  };
 
   const renderPage = () => {
     switch (page) {
@@ -91,6 +99,9 @@ export default function App() {
         </div>
       )}
       {renderPage()}
+      {settings && settings.onboardingCompleted !== true && (
+        <OnboardingDialog saving={onboardingSaving} onComplete={() => void completeOnboarding()} />
+      )}
     </MainLayout>
   );
 }
