@@ -6,7 +6,7 @@ use anyhow::{anyhow, Result};
 use serde::Serialize;
 use walkdir::WalkDir;
 
-use crate::domain::{Folder, MaxDepth};
+use crate::domain::{Action, Folder, MaxDepth, Rule};
 use crate::engine::matcher::FileItem;
 use crate::watcher::filters::PathFilter;
 
@@ -36,6 +36,25 @@ impl ScanOptions {
             exclude_patterns: folder
                 .map(|folder| folder.exclude_patterns.clone())
                 .unwrap_or_default(),
+        }
+    }
+
+    pub fn exclude_managed_destinations(&mut self, rules: &[Rule]) {
+        for rule in rules {
+            let Action::Move { destination } = &rule.action else {
+                continue;
+            };
+            let Ok(Some(root)) = crate::paths::safety::relative_destination_root(destination)
+            else {
+                continue;
+            };
+            if !self
+                .exclude_folders
+                .iter()
+                .any(|existing| existing.eq_ignore_ascii_case(&root))
+            {
+                self.exclude_folders.push(root);
+            }
         }
     }
 }
@@ -145,5 +164,39 @@ mod tests {
         let output = scan(&root, &options, || false, |_| {}).unwrap();
         assert_eq!(output.files.len(), 1);
         assert_eq!(output.files[0].name, "root.txt");
+    }
+
+    #[test]
+    fn managed_relative_destinations_are_pruned_from_recursive_scans() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("watched");
+        fs::create_dir(&root).unwrap();
+        fs::create_dir(root.join("Images")).unwrap();
+        fs::write(root.join("new.jpg"), b"new").unwrap();
+        fs::write(root.join("Images/already-sorted.jpg"), b"old").unwrap();
+        let mut options = ScanOptions {
+            recursive: true,
+            max_depth: MaxDepth::Unlimited,
+            exclude_folders: Vec::new(),
+            exclude_patterns: Vec::new(),
+        };
+        options.exclude_managed_destinations(&[Rule {
+            id: uuid::Uuid::new_v4(),
+            name: "Images".into(),
+            is_quick_rule: true,
+            enabled: true,
+            order: 0,
+            icon: "Image".into(),
+            conditions: Vec::new(),
+            action: Action::Move {
+                destination: "Images/{year}".into(),
+            },
+            created_at: chrono::Utc::now(),
+        }]);
+
+        let output = scan(&root, &options, || false, |_| {}).unwrap();
+
+        assert_eq!(output.files.len(), 1);
+        assert_eq!(output.files[0].name, "new.jpg");
     }
 }

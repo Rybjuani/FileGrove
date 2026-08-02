@@ -9,6 +9,7 @@ import {
   RotateCcw,
   Square,
   Trash2,
+  Sparkles,
   X,
 } from 'lucide-react';
 import { useAppStore } from '../stores/useAppStore';
@@ -38,15 +39,22 @@ const DAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
 export function FolderCard({ folder, onNavigateToRules }: Props) {
   const { t, i18n } = useTranslation();
-  const { rules, removeFolder, updateFolderName, updateFolderMode, updateFolderSchedule } =
-    useAppStore();
+  const {
+    rules,
+    removeFolder,
+    updateFolderName,
+    updateFolderMode,
+    updateFolderSchedule,
+    applyRecommendedRules,
+  } = useAppStore();
   const schedule = folder.schedule ?? DEFAULT_SCHEDULE;
   const [busy, setBusy] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [cancelRequested, setCancelRequested] = useState(false);
   const [progress, setProgress] = useState<OrganizeProgress | null>(null);
   const [undoSession, setUndoSession] = useState<UndoSessionSummary | null>(null);
-  const [undoRecovered, setUndoRecovered] = useState(false);
+  const [undoSessionCount, setUndoSessionCount] = useState(0);
+  const [undoBusy, setUndoBusy] = useState(false);
   const [lastResult, setLastResult] = useState<string | null>(null);
   const [nextRun, setNextRun] = useState<string | null>(null);
   const [scheduleTime, setScheduleTime] = useState(schedule.time);
@@ -56,6 +64,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
   const [previewResult, setPreviewResult] = useState<PreviewResult | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [modeChanging, setModeChanging] = useState(false);
+  const [installingRecommendations, setInstallingRecommendations] = useState(false);
   const busyRef = useRef(false);
   const activeSessionRef = useRef<string | null>(null);
 
@@ -70,10 +79,11 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
 
   useEffect(() => {
     let disposed = false;
-    void ipc.files.latestUndoSession(folder.id).then((response) => {
+    void ipc.files.listUndoSessions(folder.id).then((response) => {
       if (!disposed && response.success) {
-        setUndoSession(response.data ?? null);
-        setUndoRecovered(Boolean(response.data));
+        const sessions = response.data ?? [];
+        setUndoSession(sessions[0] ?? null);
+        setUndoSessionCount(sessions.length);
       }
     });
     return () => {
@@ -193,6 +203,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
   };
 
   const handleOrganize = async () => {
+    if (undoBusy) return;
     if (busy) {
       if (activeSessionId) {
         setCancelRequested(true);
@@ -231,13 +242,10 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
           setLastResult(t('dashboard.partialOrganized', { moved: done, failed }));
         }
         if (res.data.undoCount > 0) {
-          const latest = await ipc.files.latestUndoSession(folder.id);
-          setUndoSession(latest.success ? (latest.data ?? null) : null);
-          setUndoRecovered(false);
-        } else if (undoSession) {
-          // Keep an older persisted session available, but label it clearly
-          // so it cannot be mistaken for the just-completed run.
-          setUndoRecovered(true);
+          const history = await ipc.files.listUndoSessions(folder.id);
+          const sessions = history.success ? (history.data ?? []) : [];
+          setUndoSession(sessions[0] ?? null);
+          setUndoSessionCount(sessions.length);
         }
       } else if (res.error) {
         setLastResult(readableIpcError(res.error, t));
@@ -267,20 +275,27 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
   };
 
   const handleUndo = async () => {
-    if (!undoSession) return;
-    const res = await ipc.files.undoOrganize(undoSession.sessionId);
-    if (res.success && res.data) {
-      setLastResult(
-        t('folderCard.actions.undone', {
+    if (!undoSession || undoBusy) return;
+    setUndoBusy(true);
+    try {
+      const res = await ipc.files.undoOrganize(undoSession.sessionId);
+      if (res.data) {
+        const summary = t('folderCard.actions.undone', {
           count: res.data.done,
           failed: res.data.failed,
-        }),
-      );
-      const latest = await ipc.files.latestUndoSession(folder.id);
-      setUndoSession(latest.success ? (latest.data ?? null) : null);
-      setUndoRecovered(Boolean(latest.data));
-    } else if (res.error) {
-      setLastResult(readableIpcError(res.error, t));
+        });
+        setLastResult(
+          res.success || !res.error ? summary : `${summary} ${readableIpcError(res.error, t)}`,
+        );
+      } else if (res.error) {
+        setLastResult(readableIpcError(res.error, t));
+      }
+      const history = await ipc.files.listUndoSessions(folder.id);
+      const sessions = history.success ? (history.data ?? []) : [];
+      setUndoSession(sessions[0] ?? null);
+      setUndoSessionCount(sessions.length);
+    } finally {
+      setUndoBusy(false);
     }
   };
 
@@ -291,9 +306,10 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
       setLastResult(readableIpcError(response.error, t));
       return;
     }
-    const latest = await ipc.files.latestUndoSession(folder.id);
-    setUndoSession(latest.success ? (latest.data ?? null) : null);
-    setUndoRecovered(Boolean(latest.data));
+    const history = await ipc.files.listUndoSessions(folder.id);
+    const sessions = history.success ? (history.data ?? []) : [];
+    setUndoSession(sessions[0] ?? null);
+    setUndoSessionCount(sessions.length);
   };
 
   const handleWatcherToggle = async () => {
@@ -309,21 +325,26 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
     await useAppStore.getState().loadFolders();
   };
 
+  const handleRecommendedRules = async () => {
+    setInstallingRecommendations(true);
+    const success = await applyRecommendedRules(folder.id);
+    setInstallingRecommendations(false);
+    if (success) setLastResult(t('folderCard.recommended.ready'));
+  };
+
   const handleModeChange = async (mode: 'single' | 'auto' | 'scheduled') => {
     if (mode === folder.mode || modeChanging) return;
     setModeChanging(true);
     try {
-      let disableSubfolders = false;
       if (mode === 'auto' && folder.subfolders.enabled) {
-        if (!window.confirm(t('folderCard.advanced.autoDisablesRecursiveConfirm'))) return;
-        disableSubfolders = true;
+        if (!(await ensureRecursiveConfirmation())) return;
       }
       if (mode === 'auto' && !(await confirmDangerousImpact('auto'))) return;
       if (mode === 'scheduled' && schedule.enabled) {
         if (!(await confirmDangerousImpact('scheduled'))) return;
         if (!(await ensureRecursiveConfirmation())) return;
       }
-      const changed = await updateFolderMode(folder.id, mode, disableSubfolders);
+      const changed = await updateFolderMode(folder.id, mode);
       if (!changed) {
         setLastResult(readableIpcError(useAppStore.getState().error ?? undefined, t));
       }
@@ -415,12 +436,19 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
         <span className={`badge shrink-0 ${statusClass}`}>{statusLabel}</span>
       </div>
 
-      <div className="grid grid-cols-3 gap-1 rounded-md border border-primary-800 bg-primary-950 p-1 text-xs">
-        {(['single', 'auto', 'scheduled'] as const).map((mode) => (
+      <div
+        className={`grid gap-1 rounded-md border border-primary-800 bg-primary-950 p-1 text-xs ${
+          folder.mode === 'scheduled' ? 'grid-cols-3' : 'grid-cols-2'
+        }`}
+      >
+        {(folder.mode === 'scheduled'
+          ? (['auto', 'single', 'scheduled'] as const)
+          : (['auto', 'single'] as const)
+        ).map((mode) => (
           <button
             key={mode}
             onClick={() => void handleModeChange(mode)}
-            disabled={modeChanging || busy || scheduleSaving}
+            disabled={modeChanging || busy || undoBusy || scheduleSaving}
             className={`rounded px-2 py-1.5 transition-colors ${
               folder.mode === mode
                 ? 'bg-accent-600 text-white'
@@ -497,16 +525,29 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
         </div>
       )}
 
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-primary-400">
-          {folder.ruleIds.length > 0
-            ? `${t('folderCard.rules')}: ${folder.ruleIds.length}`
-            : t('folderCard.noRules')}
-        </span>
-        <button onClick={onNavigateToRules} className="text-accent-400 hover:text-accent-300">
-          {folder.ruleIds.length > 0 ? t('folderCard.rules') : t('folderCard.addRules')}
+      {folder.ruleIds.length === 0 ? (
+        <button
+          className="btn-secondary w-full"
+          onClick={() => void handleRecommendedRules()}
+          disabled={installingRecommendations || busy || undoBusy || modeChanging}
+        >
+          <Sparkles size={15} />
+          {t(
+            installingRecommendations
+              ? 'folderCard.recommended.installing'
+              : 'folderCard.recommended.button',
+          )}
         </button>
-      </div>
+      ) : (
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-primary-400">
+            {t('folderCard.recommended.active', { count: folder.ruleIds.length })}
+          </span>
+          <button onClick={onNavigateToRules} className="text-accent-400 hover:text-accent-300">
+            {t('folderCard.rules')}
+          </button>
+        </div>
+      )}
 
       <FolderAdvancedSettings folder={folder} />
 
@@ -514,7 +555,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
         <button
           className="btn-secondary"
           onClick={() => void handlePreview()}
-          disabled={busy || modeChanging}
+          disabled={busy || undoBusy || modeChanging}
           title={t('folderCard.actions.preview')}
         >
           <Eye size={14} />
@@ -523,7 +564,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
         <button
           className="btn-primary flex-1"
           onClick={() => void handleOrganize()}
-          disabled={(busy && !activeSessionId) || modeChanging}
+          disabled={undoBusy || (busy && !activeSessionId) || modeChanging}
         >
           {busy ? <Square size={14} /> : <Play size={14} />}
           {busy
@@ -534,7 +575,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
           <button
             className="btn-secondary"
             onClick={() => void handleWatcherToggle()}
-            disabled={busy || modeChanging}
+            disabled={busy || undoBusy || modeChanging}
             title={t(
               folder.watcherStatus === 'running'
                 ? 'folderCard.actions.pause'
@@ -547,15 +588,20 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
           </button>
         )}
         {undoSession && (
-          <button className="btn-secondary" onClick={() => void handleUndo()}>
+          <button
+            className="btn-secondary"
+            onClick={() => void handleUndo()}
+            disabled={undoBusy || busy}
+          >
             <RotateCcw size={14} />
-            {t('folderCard.actions.undo')}
+            {t(undoBusy ? 'folderCard.actions.undoing' : 'folderCard.actions.undoLatest')}
           </button>
         )}
         {undoSession && (
           <button
             className="btn-ghost p-2"
             onClick={() => void handleDismissUndo()}
+            disabled={undoBusy || busy}
             title={t('folderCard.actions.dismissUndo')}
           >
             <X size={14} />
@@ -565,7 +611,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
           className="btn-ghost"
           onClick={() => void handleRename()}
           title={t('folderCard.rename')}
-          disabled={busy || modeChanging}
+          disabled={busy || undoBusy || modeChanging}
         >
           <Pencil size={14} />
         </button>
@@ -573,7 +619,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
           className="btn-ghost"
           onClick={() => void handleRemove()}
           title={t('folderCard.actions.remove')}
-          disabled={busy || modeChanging}
+          disabled={busy || undoBusy || modeChanging}
         >
           <Trash2 size={14} />
         </button>
@@ -587,10 +633,10 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
       {lastResult && <p className="text-xs text-primary-300">{lastResult}</p>}
       {undoSession && (
         <p className="text-xs text-primary-500">
-          {t(
-            undoRecovered ? 'folderCard.actions.undoRecovered' : 'folderCard.actions.undoAvailable',
-            { count: undoSession.entryCount },
-          )}
+          {t('folderCard.actions.undoHistory', {
+            batches: undoSessionCount,
+            count: undoSession.entryCount,
+          })}
           {formattedUndoAt ? ` · ${formattedUndoAt}` : ''}
         </p>
       )}

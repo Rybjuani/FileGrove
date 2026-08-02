@@ -4,6 +4,7 @@ import {
   Archive,
   ArrowDown,
   ArrowUp,
+  Check,
   Download,
   Edit3,
   FileText,
@@ -22,12 +23,14 @@ import { useAppStore } from '../stores/useAppStore';
 
 export function Rules() {
   const { t } = useTranslation();
-  const { folders, rules, loadRules, toggleRule, deleteRule, reportError } = useAppStore();
+  const { folders, rules, loadRules, createRule, toggleRule, deleteRule, reportError } =
+    useAppStore();
   const [query, setQuery] = useState('');
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<Rule | undefined>();
   const [createAsNew, setCreateAsNew] = useState(false);
   const [reordering, setReordering] = useState(false);
+  const [creatingTemplate, setCreatingTemplate] = useState<string | null>(null);
 
   useEffect(() => {
     void loadRules();
@@ -48,21 +51,26 @@ export function Rules() {
     setEditorOpen(true);
   };
 
-  const openTemplate = (template: QuickRuleTemplate) => {
-    openEditor(
-      {
-        id: crypto.randomUUID(),
-        name: t(`quickRules.${template.key}`),
-        isQuickRule: false,
-        enabled: true,
-        order: nextOrder,
-        icon: template.iconName,
-        conditions: [{ type: 'extension', value: [...template.extensions] }],
-        action: { type: 'move', destination: '' },
-        createdAt: new Date().toISOString(),
-      },
-      true,
-    );
+  const installTemplate = async (template: QuickRuleTemplate) => {
+    const installed = rules.find((rule) => rule.isQuickRule && rule.icon === template.iconName);
+    if (installed) {
+      openEditor(installed);
+      return;
+    }
+    setCreatingTemplate(template.key);
+    const response = await createRule({
+      id: crypto.randomUUID(),
+      name: t(`quickRules.${template.key}`),
+      isQuickRule: true,
+      enabled: true,
+      order: nextOrder,
+      icon: template.iconName,
+      conditions: [{ type: 'extension', value: [...template.extensions] }],
+      action: { type: 'move', destination: t(`quickRules.${template.key}`) },
+      createdAt: new Date().toISOString(),
+    });
+    if (!response.success && response.error) reportError(response.error);
+    setCreatingTemplate(null);
   };
 
   const moveRule = async (ruleId: string, direction: -1 | 1) => {
@@ -131,11 +139,15 @@ export function Rules() {
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {QUICK_RULE_TEMPLATES.map((template) => {
             const Icon = template.icon;
+            const installed = rules.some(
+              (rule) => rule.isQuickRule && rule.icon === template.iconName,
+            );
             return (
               <button
                 key={template.key}
                 className="card flex items-center gap-3 p-3 text-left transition-colors hover:border-primary-700 hover:bg-primary-800/50"
-                onClick={() => openTemplate(template)}
+                onClick={() => void installTemplate(template)}
+                disabled={creatingTemplate !== null}
               >
                 <span className="rounded-md bg-accent-500/10 p-2 text-accent-400">
                   <Icon size={18} />
@@ -148,7 +160,11 @@ export function Rules() {
                     {template.extensions.slice(0, 5).join(', ')}
                   </span>
                 </span>
-                <Plus size={14} className="text-primary-500" />
+                {installed ? (
+                  <Check size={15} className="text-accent-400" />
+                ) : (
+                  <Plus size={14} className="text-primary-500" />
+                )}
               </button>
             );
           })}

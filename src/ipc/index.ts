@@ -40,6 +40,8 @@ export const ipc = {
     cancelOrganize: (sessionId: string) => invoke<IpcResponse>('cancel', { sessionId }),
     latestUndoSession: (folderId: string) =>
       invoke<IpcResponse<UndoSessionSummary | null>>('latest_undo_session', { folderId }),
+    listUndoSessions: (folderId: string) =>
+      invoke<IpcResponse<UndoSessionSummary[]>>('list_undo_sessions', { folderId }),
     undoOrganize: (sessionId: string) =>
       invoke<IpcResponse<{ done: number; failed: number; total: number }>>('undo', { sessionId }),
     dismissUndo: (sessionId: string) => invoke<IpcResponse>('dismiss_undo', { sessionId }),
@@ -69,6 +71,8 @@ export const ipc = {
       invoke<IpcResponse<Folder>>('assign_rules', { folderId, ruleIds }),
     unassignRules: (folderId: string, ruleIds: string[]) =>
       invoke<IpcResponse<Folder>>('unassign_rules', { folderId, ruleIds }),
+    applyRecommendedRules: (folderId: string) =>
+      invoke<IpcResponse<Folder>>('apply_recommended_rules', { folderId }),
     updateSubfoldersConfig: (id: string, config: SubfolderConfig) =>
       invoke<IpcResponse<Folder>>('update_subfolders_config', { id, config }),
     updateExclusions: (id: string, excludeFolders: string[], excludePatterns: string[]) =>
@@ -83,6 +87,7 @@ export const ipc = {
       excludeFolders: string[],
       excludePatterns: string[],
       ruleIds: string[],
+      confirmRecursive = false,
     ) =>
       invoke<IpcResponse<Folder>>('update_configuration', {
         id,
@@ -90,6 +95,7 @@ export const ipc = {
         excludeFolders,
         excludePatterns,
         ruleIds,
+        confirmRecursive,
       }),
     updateSchedule: (id: string, schedule: unknown) =>
       invoke<IpcResponse<Folder>>('update_schedule', { id, schedule }),

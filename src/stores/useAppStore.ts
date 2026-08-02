@@ -38,12 +38,14 @@ interface AppState {
     excludeFolders: string[],
     excludePatterns: string[],
     ruleIds: string[],
+    confirmRecursive?: boolean,
   ) => Promise<boolean>;
   updateFolderRules: (
     id: string,
     currentRuleIds: string[],
     nextRuleIds: string[],
   ) => Promise<boolean>;
+  applyRecommendedRules: (id: string) => Promise<boolean>;
   createRule: (rule: Rule) => Promise<{ success: boolean; error?: string }>;
   updateRule: (id: string, updates: Partial<Rule>) => Promise<{ success: boolean; error?: string }>;
   deleteRule: (id: string) => Promise<void>;
@@ -170,13 +172,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     return false;
   },
 
-  updateFolderConfiguration: async (id, config, excludeFolders, excludePatterns, ruleIds) => {
+  updateFolderConfiguration: async (
+    id,
+    config,
+    excludeFolders,
+    excludePatterns,
+    ruleIds,
+    confirmRecursive = false,
+  ) => {
     const res = await ipc.folders.updateConfiguration(
       id,
       config,
       excludeFolders,
       excludePatterns,
       ruleIds,
+      confirmRecursive,
     );
     if (res.success && res.data) {
       set({ folders: get().folders.map((folder) => (folder.id === id ? res.data! : folder)) });
@@ -213,6 +223,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ folders: get().folders.map((folder) => (folder.id === id ? updated! : folder)) });
     }
     return true;
+  },
+
+  applyRecommendedRules: async (id) => {
+    const res = await ipc.folders.applyRecommendedRules(id);
+    if (res.success && res.data) {
+      set({ folders: get().folders.map((folder) => (folder.id === id ? res.data! : folder)) });
+      await get().loadRules();
+      return true;
+    }
+    if (res.error) set({ error: res.error });
+    return false;
   },
 
   createRule: async (rule) => {

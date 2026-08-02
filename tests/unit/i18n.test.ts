@@ -14,8 +14,12 @@ describe('translation catalogs', () => {
     expect(leafKeys(es).sort()).toEqual(leafKeys(en).sort());
   });
 
-  it('contains Linux-first examples instead of Windows-only paths', () => {
-    expect(en.rules.destinationPlaceholder).toContain('/home/');
-    expect(es.rules.destinationPlaceholder).toContain('/home/');
+  it('leads with managed folders and keeps Linux-compatible advanced examples', () => {
+    expect(en.rules.destinationPlaceholder).toContain('Images');
+    expect(es.rules.destinationPlaceholder).toContain('Imágenes');
+    expect(en.rules.destinationPlaceholder).toContain('/another/folder/');
+    expect(es.rules.destinationPlaceholder).toContain('/otra/carpeta/');
+    expect(en.rules.destinationPlaceholder).not.toMatch(/[A-Za-z]:\\/);
+    expect(es.rules.destinationPlaceholder).not.toMatch(/[A-Za-z]:\\/);
   });
 });

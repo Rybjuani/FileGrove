@@ -70,6 +70,7 @@ const ERROR_KEYS: Record<string, string> = {
   UNDO_FAILED: 'errors.undoFailed',
   UNDO_JOURNAL_NEEDS_REVIEW: 'errors.undoJournalNeedsReview',
   UNDO_LOG_NOT_FOUND: 'errors.undoLogNotFound',
+  UNDO_NEWER_SESSION_EXISTS: 'errors.undoNewerSessionExists',
   UNDO_ORIGIN_EXISTS: 'errors.undoOriginExists',
   UNDO_ORIGIN_ALREADY_EXISTS: 'errors.undoOriginExists',
   UNDO_OVERWRITE_BACKUP_MISSING: 'errors.undoBackupMissing',

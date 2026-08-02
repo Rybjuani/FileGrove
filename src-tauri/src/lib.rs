@@ -150,6 +150,7 @@ pub fn run() {
             ipc::folders::update_mode,
             ipc::folders::assign_rules,
             ipc::folders::unassign_rules,
+            ipc::folders::apply_recommended_rules,
             ipc::folders::update_subfolders_config,
             ipc::folders::update_configuration,
             ipc::folders::update_exclusions,
@@ -177,6 +178,7 @@ pub fn run() {
             // Organize session
             ipc::organize::cancel,
             ipc::organize::latest_undo_session,
+            ipc::organize::list_undo_sessions,
             ipc::organize::undo,
             ipc::organize::dismiss_undo,
             // Watcher

@@ -7,7 +7,7 @@ import { readableIpcError } from '../lib/errors';
 import {
   CONDITION_TYPES,
   conditionValueText,
-  isAbsoluteDestination,
+  isValidDestination,
   isValidCondition,
   parseConditionValue,
 } from '../lib/rules';
@@ -115,8 +115,8 @@ export function RuleEditor({ rule, nextOrder, createAsNew = false, onClose }: Pr
     if (hasInvalidCondition) return setFormError(t('rules.validation.invalidCondition'));
     if (action.type === 'move') {
       if (!action.destination.trim()) return setFormError(t('rules.validation.destination'));
-      if (!isAbsoluteDestination(action.destination)) {
-        return setFormError(t('rules.validation.destinationAbsolute'));
+      if (!isValidDestination(action.destination)) {
+        return setFormError(t('rules.validation.destinationSafe'));
       }
     }
     if (action.type === 'runCommand') {
@@ -134,7 +134,7 @@ export function RuleEditor({ rule, nextOrder, createAsNew = false, onClose }: Pr
     const nextRule: Rule = {
       id: rule && !createAsNew ? rule.id : crypto.randomUUID(),
       name: name.trim(),
-      isQuickRule: rule && !createAsNew ? rule.isQuickRule : false,
+      isQuickRule: rule?.isQuickRule ?? false,
       enabled,
       order: rule && !createAsNew ? rule.order : nextOrder,
       icon: rule?.icon ?? 'File',
@@ -280,6 +280,9 @@ export function RuleEditor({ rule, nextOrder, createAsNew = false, onClose }: Pr
                       <FolderOpen size={15} /> {t('rules.selectDestination')}
                     </button>
                   </div>
+                  <span className="block text-xs text-primary-500">
+                    {t('rules.destinationManagedHint')}
+                  </span>
                 </label>
                 <div>
                   <p className="mb-2 text-xs text-primary-500">{t('rules.tokens.help')}</p>

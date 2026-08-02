@@ -69,13 +69,31 @@ export function FolderAdvancedSettings({ folder }: { folder: Folder }) {
     }
 
     const config: SubfolderConfig = {
-      enabled: folder.mode === 'auto' ? false : recursive,
+      enabled: recursive,
       destinationMode,
       firstRunConfirmed: folder.subfolders.firstRunConfirmed,
       maxDepth: nextDepth,
     };
+    const recursiveScopeChanged =
+      recursive !== folder.subfolders.enabled ||
+      destinationMode !== folder.subfolders.destinationMode ||
+      depthText(nextDepth) !== depthText(folder.subfolders.maxDepth) ||
+      folders.join('\n') !== folder.excludeFolders.join('\n') ||
+      patterns.join('\n') !== folder.excludePatterns.join('\n');
+    const confirmRecursive =
+      folder.mode === 'auto' &&
+      recursive &&
+      (!folder.subfolders.firstRunConfirmed || recursiveScopeChanged);
+    if (confirmRecursive && !window.confirm(t('folderCard.advanced.firstRecursiveRun'))) return;
     setSaving(true);
-    const success = await updateFolderConfiguration(folder.id, config, folders, patterns, ruleIds);
+    const success = await updateFolderConfiguration(
+      folder.id,
+      config,
+      folders,
+      patterns,
+      ruleIds,
+      confirmRecursive,
+    );
     setSaving(false);
     setSaved(success);
   };
@@ -140,20 +158,12 @@ export function FolderAdvancedSettings({ folder }: { folder: Folder }) {
               <input
                 type="checkbox"
                 checked={recursive}
-                disabled={folder.mode === 'auto'}
                 onChange={(event) => {
                   setRecursive(event.target.checked);
                   setSaved(false);
                 }}
               />
-              <span>
-                {t('folderCard.advanced.recursive')}
-                {folder.mode === 'auto' && (
-                  <span className="mt-1 block text-xs text-primary-500">
-                    {t('folderCard.advanced.recursiveAutoDisabled')}
-                  </span>
-                )}
-              </span>
+              <span>{t('folderCard.advanced.recursive')}</span>
             </label>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -162,7 +172,7 @@ export function FolderAdvancedSettings({ folder }: { folder: Folder }) {
                 <select
                   className="input"
                   value={maxDepth}
-                  disabled={!recursive || folder.mode === 'auto'}
+                  disabled={!recursive}
                   onChange={(event) => {
                     setMaxDepth(event.target.value);
                     setSaved(false);
@@ -181,7 +191,7 @@ export function FolderAdvancedSettings({ folder }: { folder: Folder }) {
                 <select
                   className="input"
                   value={destinationMode}
-                  disabled={!recursive || folder.mode === 'auto'}
+                  disabled={!recursive}
                   onChange={(event) => {
                     setDestinationMode(event.target.value as DestinationMode);
                     setSaved(false);

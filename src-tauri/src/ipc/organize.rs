@@ -43,6 +43,34 @@ pub async fn latest_undo_session(
 }
 
 #[tauri::command]
+pub async fn list_undo_sessions(
+    state: State<'_, AppState>,
+    folder_id: Uuid,
+) -> Result<Value, String> {
+    let folder = match state.db.folders().get(folder_id) {
+        Ok(Some(folder)) => folder,
+        Ok(None) => return Ok(json!({ "success": false, "error": "FOLDER_NOT_FOUND" })),
+        Err(error) => return Ok(json!({ "success": false, "error": error.to_string() })),
+    };
+    let root = std::path::PathBuf::from(crate::paths::safety::canonical_path_key(Path::new(
+        &folder.path,
+    )));
+    let sessions = match state.db.undo().list_sessions() {
+        Ok(sessions) => sessions
+            .into_iter()
+            .filter(|session| {
+                let origin = std::path::PathBuf::from(crate::paths::safety::canonical_path_key(
+                    Path::new(&session.from_path),
+                ));
+                origin.starts_with(&root)
+            })
+            .collect::<Vec<_>>(),
+        Err(error) => return Ok(json!({ "success": false, "error": error.to_string() })),
+    };
+    Ok(json!({ "success": true, "data": sessions }))
+}
+
+#[tauri::command]
 pub async fn undo(
     app: AppHandle,
     state: State<'_, AppState>,
@@ -91,6 +119,33 @@ pub async fn undo(
     } else {
         None
     };
+
+    // Undo is intentionally a stack. Reverting an older batch while newer
+    // moves still depend on it can create collisions or restore files into a
+    // layout that never existed. Repeated Undo still reaches every batch.
+    if let Some(folder) = origin_folder.as_ref() {
+        let root = std::path::PathBuf::from(crate::paths::safety::canonical_path_key(Path::new(
+            &folder.path,
+        )));
+        let sessions = match state.db.undo().list_sessions() {
+            Ok(sessions) => sessions,
+            Err(error) => {
+                return Ok(json!({ "success": false, "error": error.to_string() }));
+            }
+        };
+        let latest_for_folder = sessions.into_iter().find(|session| {
+            let origin = std::path::PathBuf::from(crate::paths::safety::canonical_path_key(
+                Path::new(&session.from_path),
+            ));
+            origin.starts_with(&root)
+        });
+        if latest_for_folder.is_some_and(|latest| latest.session_id != session_id) {
+            return Ok(json!({
+                "success": false,
+                "error": "UNDO_NEWER_SESSION_EXISTS"
+            }));
+        }
+    }
 
     let watcher_was_running = if let Some(folder) = origin_folder.as_ref() {
         if state.watcher.status(folder.id) == WatcherStatus::Running {

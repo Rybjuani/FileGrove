@@ -153,16 +153,11 @@ fn validate_rule(rule: &Rule) -> Result<(), &'static str> {
         }
     }
     match &rule.action {
-        Action::Move { destination } if destination.trim().is_empty() => Err("INVALID_DESTINATION"),
-        Action::Move { destination } if !std::path::Path::new(destination).is_absolute() => {
-            Err("INVALID_DESTINATION")
-        }
         Action::Move { destination }
-            if std::path::Path::new(destination)
-                .components()
-                .any(|component| matches!(component, std::path::Component::ParentDir)) =>
+            if destination.trim().is_empty()
+                || crate::paths::safety::relative_destination_root(destination).is_err() =>
         {
-            Err("INVALID_DESTINATION_TRAVERSAL")
+            Err("INVALID_DESTINATION")
         }
         Action::RunCommand {
             command,

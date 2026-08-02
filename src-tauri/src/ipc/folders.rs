@@ -169,16 +169,17 @@ pub async fn update_mode(
                 Ok(None) => return Ok(json!({ "success": false, "error": "FOLDER_NOT_FOUND" })),
                 Err(error) => return Ok(json!({ "success": false, "error": error.to_string() })),
             };
-            if new_mode == FolderMode::Auto && folder.subfolders.enabled {
-                if !disable_subfolders.unwrap_or(false) {
-                    return Ok(json!({
-                        "success": false,
-                        "error": "AUTO_MODE_CONFLICTS_WITH_SUBFOLDERS"
-                    }));
-                }
-                folder.subfolders.enabled = false;
-                folder.subfolders.first_run_confirmed = false;
+            if new_mode == FolderMode::Auto
+                && folder.recursive_organization_requires_confirmation(true)
+            {
+                return Ok(json!({
+                    "success": false,
+                    "error": "FIRST_RUN_CONFIRMATION_REQUIRED"
+                }));
             }
+            // Kept in the command signature for compatibility with older
+            // renderers. Automatic mode now supports confirmed subfolders.
+            let _ = disable_subfolders;
             let previous_folder = folder.clone();
             folder.mode = new_mode;
             if new_mode == FolderMode::Auto {
@@ -239,6 +240,7 @@ pub async fn update_mode(
 /// recursion and exclusions must never become partially applied because a
 /// later renderer request failed.
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn update_configuration(
     app: AppHandle,
     state: State<'_, AppState>,
@@ -247,6 +249,7 @@ pub async fn update_configuration(
     exclude_folders: Vec<String>,
     exclude_patterns: Vec<String>,
     rule_ids: Vec<Uuid>,
+    confirm_recursive: Option<bool>,
 ) -> Result<Value, String> {
     if matches!(config.max_depth, MaxDepth::Level(0) | MaxDepth::Level(65..)) {
         return Ok(json!({ "success": false, "error": "INVALID_MAX_DEPTH" }));
@@ -289,12 +292,6 @@ pub async fn update_configuration(
         Ok(None) => return Ok(json!({ "success": false, "error": "FOLDER_NOT_FOUND" })),
         Err(error) => return Ok(json!({ "success": false, "error": error.to_string() })),
     };
-    if config.enabled && folder.mode == FolderMode::Auto {
-        return Ok(json!({
-            "success": false,
-            "error": "SUBFOLDERS_REQUIRE_MANUAL_MODE"
-        }));
-    }
     if let Err(error) = crate::watcher::filters::PathFilter::new(
         Path::new(&folder.path),
         &exclude_folders,
@@ -306,6 +303,15 @@ pub async fn update_configuration(
     let previous = folder.clone();
     let previous_status = state.watcher.status(id);
     folder.reconcile_recursive_confirmation(&mut config, &exclude_folders, &exclude_patterns);
+    if folder.mode == FolderMode::Auto && config.enabled && !config.first_run_confirmed {
+        if !confirm_recursive.unwrap_or(false) {
+            return Ok(json!({
+                "success": false,
+                "error": "FIRST_RUN_CONFIRMATION_REQUIRED"
+            }));
+        }
+        config.first_run_confirmed = true;
+    }
     folder.subfolders = config;
     folder.exclude_folders = exclude_folders;
     folder.exclude_patterns = exclude_patterns;
@@ -427,6 +433,57 @@ pub async fn unassign_rules(
 }
 
 #[tauri::command]
+pub async fn apply_recommended_rules(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    folder_id: Uuid,
+) -> Result<Value, String> {
+    let folder = match state.db.folders().get(folder_id) {
+        Ok(Some(folder)) => folder,
+        Ok(None) => return Ok(json!({ "success": false, "error": "FOLDER_NOT_FOUND" })),
+        Err(error) => return Ok(json!({ "success": false, "error": error.to_string() })),
+    };
+    let Some(_operation_guard) = acquire_folder_operation(&state, &folder) else {
+        return Ok(json!({ "success": false, "error": "ORGANIZE_ALREADY_RUNNING" }));
+    };
+    let previous_status = state.watcher.status(folder_id);
+    let language = state.db.settings().get_language();
+    let updated = match state
+        .db
+        .folders()
+        .apply_recommended_rules(folder_id, &language)
+    {
+        Ok(folder) => folder,
+        Err(error) => return Ok(json!({ "success": false, "error": error.to_string() })),
+    };
+
+    if previous_status != WatcherStatus::Stopped {
+        let restarted = state
+            .watcher
+            .stop_watching(&app, folder_id)
+            .and_then(|()| state.watcher.start_watching(&app, &updated))
+            .and_then(|()| {
+                if previous_status == WatcherStatus::Paused {
+                    state.watcher.pause(&app, folder_id)
+                } else {
+                    Ok(())
+                }
+            });
+        if let Err(error) = restarted {
+            let _ = state.db.folders().update(&folder);
+            let _ = state.watcher.stop_watching(&app, folder_id);
+            let _ = state.watcher.start_watching(&app, &folder);
+            if previous_status == WatcherStatus::Paused {
+                let _ = state.watcher.pause(&app, folder_id);
+            }
+            return Ok(json!({ "success": false, "error": error.to_string() }));
+        }
+    }
+
+    Ok(json!({ "success": true, "data": updated }))
+}
+
+#[tauri::command]
 pub async fn update_subfolders_config(
     state: State<'_, AppState>,
     id: Uuid,
@@ -442,12 +499,6 @@ pub async fn update_subfolders_config(
                 Ok(None) => return Ok(json!({ "success": false, "error": "FOLDER_NOT_FOUND" })),
                 Err(error) => return Ok(json!({ "success": false, "error": error.to_string() })),
             };
-            if config.enabled && folder.mode == FolderMode::Auto {
-                return Ok(json!({
-                    "success": false,
-                    "error": "SUBFOLDERS_REQUIRE_MANUAL_MODE"
-                }));
-            }
             if matches!(config.max_depth, MaxDepth::Level(0) | MaxDepth::Level(65..)) {
                 return Ok(json!({ "success": false, "error": "INVALID_MAX_DEPTH" }));
             }
@@ -458,6 +509,12 @@ pub async fn update_subfolders_config(
                 &exclude_folders,
                 &exclude_patterns,
             );
+            if config.enabled && folder.mode == FolderMode::Auto && !config.first_run_confirmed {
+                return Ok(json!({
+                    "success": false,
+                    "error": "FIRST_RUN_CONFIRMATION_REQUIRED"
+                }));
+            }
             folder.subfolders = config;
             match state.db.folders().update(&folder) {
                 Ok(()) => Ok(json!({ "success": true, "data": folder })),

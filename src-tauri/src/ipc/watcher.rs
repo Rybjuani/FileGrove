@@ -18,10 +18,10 @@ pub async fn start(
     if folder.mode != FolderMode::Auto {
         return Ok(json!({ "success": false, "error": "WATCHER_REQUIRES_AUTO_MODE" }));
     }
-    if folder.subfolders.enabled {
+    if folder.recursive_organization_requires_confirmation(true) {
         return Ok(json!({
             "success": false,
-            "error": "AUTO_MODE_CONFLICTS_WITH_SUBFOLDERS"
+            "error": "FIRST_RUN_CONFIRMATION_REQUIRED"
         }));
     }
     match state.watcher.start_watching_and_catch_up(&app, &folder) {

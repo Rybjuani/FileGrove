@@ -68,7 +68,14 @@ async fn configured_scan(
     cancellation: Option<&CancellationToken>,
 ) -> Result<ConfiguredScan, String> {
     let folder = find_folder_by_path(db, Path::new(folder_path))?;
-    let options = ScanOptions::for_folder(folder.as_ref(), recursive_requested);
+    let mut options = ScanOptions::for_folder(folder.as_ref(), recursive_requested);
+    if let Some(folder) = folder.as_ref() {
+        let rules = db
+            .rules()
+            .get_by_ids(&folder.rule_ids)
+            .map_err(|error| error.to_string())?;
+        options.exclude_managed_destinations(&rules);
+    }
     let root = PathBuf::from(folder_path);
     let cancellation = cancellation.cloned();
     let progress_app = app.cloned();
@@ -379,6 +386,12 @@ async fn organize_paths_inner_with_gate(
         Ok(None) => return json!({ "success": false, "error": "FOLDER_NOT_FOUND" }),
         Err(error) => return json!({ "success": false, "error": error }),
     };
+    if folder.recursive_organization_requires_confirmation(folder.subfolders.enabled) {
+        return json!({
+            "success": false,
+            "error": "FIRST_RUN_CONFIRMATION_REQUIRED"
+        });
+    }
     let rules = match load_assigned_rules(db, &folder) {
         Ok(rules) => rules,
         Err(error) => return json!({ "success": false, "error": error }),
@@ -407,9 +420,25 @@ async fn organize_paths_inner_with_gate(
             return json!({ "success": false, "error": error.to_string() });
         }
     };
+    let mut exclude_folders = folder.exclude_folders.clone();
+    for rule in &rules {
+        let crate::domain::Action::Move { destination } = &rule.action else {
+            continue;
+        };
+        let Ok(Some(managed_root)) = crate::paths::safety::relative_destination_root(destination)
+        else {
+            continue;
+        };
+        if !exclude_folders
+            .iter()
+            .any(|existing| existing.eq_ignore_ascii_case(&managed_root))
+        {
+            exclude_folders.push(managed_root);
+        }
+    }
     let filter = match crate::watcher::filters::PathFilter::new(
         &root,
-        &folder.exclude_folders,
+        &exclude_folders,
         &folder.exclude_patterns,
     ) {
         Ok(filter) => filter,
@@ -428,7 +457,16 @@ async fn organize_paths_inner_with_gate(
             Ok(source) => source,
             Err(_) => continue,
         };
-        if source.parent() != Some(root.as_path()) {
+        let subfolder_depth = source
+            .strip_prefix(&root)
+            .map(|relative| relative.components().count().saturating_sub(1))
+            .unwrap_or(usize::MAX);
+        if (!folder.subfolders.enabled && subfolder_depth > 0)
+            || !folder
+                .subfolders
+                .max_depth
+                .includes(u32::try_from(subfolder_depth).unwrap_or(u32::MAX))
+        {
             continue;
         }
         let key = crate::paths::safety::canonical_path_key(&source);
@@ -450,7 +488,8 @@ async fn organize_paths_inner_with_gate(
         folder_path,
         folder.id,
         plan,
-        false,
+        folder.subfolders.enabled
+            && folder.subfolders.destination_mode == DestinationMode::Preserve,
     )
     .await
 }

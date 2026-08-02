@@ -14,7 +14,7 @@ use tauri::{AppHandle, Emitter};
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-use crate::domain::{Folder, FolderMode, WatcherStatus};
+use crate::domain::{Action, Folder, FolderMode, WatcherStatus};
 use crate::engine::cancellation::CancellationRegistry;
 use crate::storage::Database;
 
@@ -99,12 +99,26 @@ impl WatcherService {
         let watched_path =
             crate::paths::safety::validate_scan_root(PathBuf::from(&folder.path).as_path())
                 .map_err(|error| anyhow!(error.to_string()))?;
-        let path_filter = PathFilter::new(
-            &watched_path,
-            &folder.exclude_folders,
-            &folder.exclude_patterns,
-        )
-        .map_err(|error| anyhow!(error.to_string()))?;
+        let mut exclude_folders = folder.exclude_folders.clone();
+        let rules = self.db.rules().get_by_ids(&folder.rule_ids)?;
+        for rule in rules {
+            let Action::Move { destination } = rule.action else {
+                continue;
+            };
+            let Ok(Some(root)) = crate::paths::safety::relative_destination_root(&destination)
+            else {
+                continue;
+            };
+            if !exclude_folders
+                .iter()
+                .any(|existing| existing.eq_ignore_ascii_case(&root))
+            {
+                exclude_folders.push(root);
+            }
+        }
+        let path_filter =
+            PathFilter::new(&watched_path, &exclude_folders, &folder.exclude_patterns)
+                .map_err(|error| anyhow!(error.to_string()))?;
 
         let globally_paused = self.automation_paused.load(Ordering::Acquire);
         let is_paused = Arc::new(AtomicBool::new(globally_paused));
@@ -156,9 +170,12 @@ impl WatcherService {
             },
         )?;
 
-        debouncer
-            .watcher()
-            .watch(&watched_path, notify::RecursiveMode::NonRecursive)?;
+        let recursive_mode = if folder.subfolders.enabled {
+            notify::RecursiveMode::Recursive
+        } else {
+            notify::RecursiveMode::NonRecursive
+        };
+        debouncer.watcher().watch(&watched_path, recursive_mode)?;
 
         let db = self.db.clone();
         let cancellations = self.cancellations.clone();
@@ -486,7 +503,7 @@ async fn organize_with_retry(
                     db,
                     cancellations,
                     folder_path,
-                    false,
+                    true,
                     gate.automation_paused,
                 )
                 .await

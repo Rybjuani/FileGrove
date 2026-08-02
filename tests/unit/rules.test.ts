@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Rule } from '../../src/ipc/types';
 import {
   isAbsoluteDestination,
+  isManagedDestination,
   isValidCondition,
   isValidRule,
   parseConditionValue,
@@ -23,6 +24,13 @@ describe('rule form helpers', () => {
     expect(isAbsoluteDestination('../Documents')).toBe(false);
   });
 
+  it('accepts managed folders but rejects traversal and dynamic roots', () => {
+    expect(isManagedDestination('Images')).toBe(true);
+    expect(isManagedDestination('Images/{year}/{month}')).toBe(true);
+    expect(isManagedDestination('../Images')).toBe(false);
+    expect(isManagedDestination('{year}/Images')).toBe(false);
+  });
+
   it('validates a complete move rule', () => {
     const rule: Rule = {
       id: crypto.randomUUID(),
@@ -36,5 +44,11 @@ describe('rule form helpers', () => {
       createdAt: new Date().toISOString(),
     };
     expect(isValidRule(rule)).toBe(true);
+    expect(
+      isValidRule({
+        ...rule,
+        action: { type: 'move', destination: 'Images/{year}' },
+      }),
+    ).toBe(true);
   });
 });

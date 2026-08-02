@@ -64,18 +64,72 @@ pub fn validate_destination_directory(scan_root: &Path, destination: &Path) -> R
     }
     reject_parent_components(destination, "INVALID_DESTINATION_TRAVERSAL")?;
     let root = validate_scan_root(scan_root)?;
+    let managed_destination = component_starts_with(destination, &root);
+    if managed_destination {
+        reject_symlinks_below_root(&root, destination)?;
+    }
     let resolved =
         canonical_or_resolved(destination).map_err(|_| anyhow!("INVALID_DESTINATION"))?;
-    if destination.exists() && !resolved.is_dir() {
-        return Err(anyhow!("INVALID_DESTINATION"));
+    if destination.exists() {
+        let metadata =
+            std::fs::symlink_metadata(destination).map_err(|_| anyhow!("INVALID_DESTINATION"))?;
+        if metadata.file_type().is_symlink() || !metadata.is_dir() {
+            return Err(anyhow!("INVALID_DESTINATION"));
+        }
     }
     if is_protected_root(&resolved) {
         return Err(anyhow!("INVALID_DESTINATION_PROTECTED"));
     }
-    if component_starts_with(&resolved, &root) {
+    // A strict child of the watched folder is a supported managed output.
+    // The root itself is never a destination because that would turn every
+    // matching move into a no-op or a naming conflict.
+    if resolved == root {
         return Err(anyhow!("INVALID_DESTINATION_WATCHED_FOLDER"));
     }
+    if managed_destination && !component_starts_with(&resolved, &root) {
+        return Err(anyhow!("INVALID_DESTINATION"));
+    }
     Ok(resolved)
+}
+
+/// Return the stable first folder of a relative destination template.
+/// Internal outputs require a literal first component so recursive scans and
+/// watchers can exclude the entire generated tree before processing files.
+pub fn relative_destination_root(template: &str) -> Result<Option<String>> {
+    let template = template.trim();
+    if template.is_empty() || template.contains('\0') {
+        return Err(anyhow!("INVALID_DESTINATION"));
+    }
+    let path = Path::new(template);
+    if path.is_absolute() {
+        reject_parent_components(path, "INVALID_DESTINATION_TRAVERSAL")?;
+        return Ok(None);
+    }
+    let mut first = None;
+    for component in path.components() {
+        match component {
+            Component::Normal(value) => {
+                if first.is_none() {
+                    let value = value
+                        .to_str()
+                        .ok_or_else(|| anyhow!("INVALID_DESTINATION"))?;
+                    if value.contains('{') || value.contains('}') {
+                        return Err(anyhow!("INVALID_DESTINATION_DYNAMIC_ROOT"));
+                    }
+                    first = Some(value.to_string());
+                }
+            }
+            Component::CurDir
+            | Component::ParentDir
+            | Component::RootDir
+            | Component::Prefix(_) => {
+                return Err(anyhow!("INVALID_DESTINATION_TRAVERSAL"));
+            }
+        }
+    }
+    first
+        .map(Some)
+        .ok_or_else(|| anyhow!("INVALID_DESTINATION"))
 }
 
 pub fn validate_destination_outside_watched_folders<'a>(
@@ -103,6 +157,25 @@ fn reject_parent_components(path: &Path, code: &'static str) -> Result<()> {
     } else {
         Ok(())
     }
+}
+
+fn reject_symlinks_below_root(root: &Path, destination: &Path) -> Result<()> {
+    let relative = destination
+        .strip_prefix(root)
+        .map_err(|_| anyhow!("INVALID_DESTINATION"))?;
+    let mut current = root.to_path_buf();
+    for component in relative.components() {
+        current.push(component);
+        match std::fs::symlink_metadata(&current) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                return Err(anyhow!("INVALID_DESTINATION"));
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => break,
+            Err(_) => return Err(anyhow!("INVALID_DESTINATION")),
+        }
+    }
+    Ok(())
 }
 
 fn canonical_or_resolved(path: &Path) -> Result<PathBuf> {
@@ -187,18 +260,48 @@ mod tests {
     use std::fs;
 
     #[test]
-    fn rejects_symlink_sources_and_destinations_inside_the_root() {
+    fn accepts_managed_children_but_rejects_root_and_symlinks() {
         let temp = tempfile::tempdir().unwrap();
         let root = temp.path().join("watched");
         fs::create_dir(&root).unwrap();
         fs::write(root.join("file.txt"), b"data").unwrap();
         assert!(validate_source_file(&root, &root.join("file.txt")).is_ok());
-        assert!(validate_destination_directory(&root, &root.join("sorted")).is_err());
+        assert_eq!(
+            validate_destination_directory(&root, &root.join("sorted")).unwrap(),
+            root.join("sorted")
+        );
+        assert!(validate_destination_directory(&root, &root).is_err());
 
         #[cfg(unix)]
         {
             std::os::unix::fs::symlink(root.join("file.txt"), root.join("link.txt")).unwrap();
             assert!(validate_source_file(&root, &root.join("link.txt")).is_err());
+            fs::create_dir(root.join("real-destination")).unwrap();
+            std::os::unix::fs::symlink(
+                root.join("real-destination"),
+                root.join("linked-destination"),
+            )
+            .unwrap();
+            assert!(
+                validate_destination_directory(&root, &root.join("linked-destination")).is_err()
+            );
+            assert!(validate_destination_directory(
+                &root,
+                &root.join("linked-destination").join("nested")
+            )
+            .is_err());
         }
+    }
+
+    #[test]
+    fn relative_destinations_require_a_static_safe_root() {
+        assert_eq!(
+            relative_destination_root("Images/{year}/{month}").unwrap(),
+            Some("Images".to_string())
+        );
+        assert_eq!(relative_destination_root("/tmp/Images").unwrap(), None);
+        assert!(relative_destination_root("{year}/Images").is_err());
+        assert!(relative_destination_root("../Images").is_err());
+        assert!(relative_destination_root(".").is_err());
     }
 }

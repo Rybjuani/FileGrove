@@ -17,8 +17,8 @@ use crate::engine::keyed_lock::KeyedAsyncLock;
 use crate::engine::matcher::FileItem;
 use crate::engine::planner::compute_organize_plan;
 use crate::paths::safety::{
-    validate_destination_directory, validate_destination_outside_watched_folders,
-    validate_scan_root, validate_source_file,
+    relative_destination_root, validate_destination_directory,
+    validate_destination_outside_watched_folders, validate_scan_root, validate_source_file,
 };
 use crate::paths::tokens::resolve_destination_from_file;
 use crate::storage::command_ledger::CommandClaim;
@@ -195,6 +195,12 @@ impl<'a> Organizer<'a> {
             Ok(path) => path,
             Err(error) => return action_error(error),
         };
+        if destination_directory.is_relative() {
+            if let Err(error) = relative_destination_root(destination) {
+                return action_error(error.to_string());
+            }
+            destination_directory = scan_root.join(destination_directory);
+        }
 
         if self.preserve_relative_structure {
             if let Some(relative_parent) = source
@@ -211,7 +217,7 @@ impl<'a> Organizer<'a> {
                 Ok(path) => path,
                 Err(error) => return action_error(error.to_string()),
             };
-        if let Err(error) = self.validate_against_all_watched_folders(&destination_directory) {
+        if let Err(error) = self.validate_against_other_watched_folders(&destination_directory) {
             return action_error(error);
         }
         if let Err(error) = tokio::fs::create_dir_all(&destination_directory).await {
@@ -224,7 +230,7 @@ impl<'a> Organizer<'a> {
                 Ok(path) => path,
                 Err(error) => return action_error(error.to_string()),
             };
-        if let Err(error) = self.validate_against_all_watched_folders(&destination_directory) {
+        if let Err(error) = self.validate_against_other_watched_folders(&destination_directory) {
             return action_error(error);
         }
         let Some(file_name) = source.file_name() else {
@@ -361,15 +367,22 @@ impl<'a> Organizer<'a> {
         }
     }
 
-    fn validate_against_all_watched_folders(&self, destination: &Path) -> Result<(), String> {
+    fn validate_against_other_watched_folders(&self, destination: &Path) -> Result<(), String> {
         let folders = self
             .db
             .folders()
             .list()
             .map_err(|error| format!("FOLDER_LOAD_FAILED: {error}"))?;
+        let current_root = crate::paths::safety::canonical_path_key(&self.scan_root);
         validate_destination_outside_watched_folders(
             destination,
-            folders.iter().map(|folder| Path::new(&folder.path)),
+            folders
+                .iter()
+                .filter(|folder| {
+                    crate::paths::safety::canonical_path_key(Path::new(&folder.path))
+                        != current_root
+                })
+                .map(|folder| Path::new(&folder.path)),
         )
         .map_err(|error| error.to_string())
     }
@@ -594,10 +607,10 @@ mod tests {
     use std::fs;
 
     #[tokio::test]
-    async fn move_records_activity_and_a_reversible_undo_entry() {
+    async fn relative_move_creates_a_managed_folder_and_records_undo() {
         let temporary = tempfile::tempdir().unwrap();
         let watched = temporary.path().join("watched");
-        let destination = temporary.path().join("organized");
+        let destination = watched.join("Documents");
         fs::create_dir(&watched).unwrap();
         let source = watched.join("report.txt");
         fs::write(&source, b"report").unwrap();
@@ -608,7 +621,7 @@ mod tests {
         let session_id = Uuid::new_v4();
         let file = FileItem::from_path_sync(source.to_string_lossy().as_ref()).unwrap();
         let action = Action::Move {
-            destination: destination.to_string_lossy().into_owned(),
+            destination: "Documents".into(),
         };
         let rule_id = Uuid::new_v4();
         database

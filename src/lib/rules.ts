@@ -66,6 +66,26 @@ export function isAbsoluteDestination(value: string): boolean {
   );
 }
 
+export function isManagedDestination(value: string): boolean {
+  const normalized = value.trim().replaceAll('\\', '/');
+  if (!normalized || normalized.includes('\0') || isAbsoluteDestination(normalized)) return false;
+  const components = normalized.split('/');
+  const root = components[0];
+  if (
+    !root ||
+    components.some((component) => !component || component === '.' || component === '..') ||
+    root.includes('{') ||
+    root.includes('}')
+  ) {
+    return false;
+  }
+  return true;
+}
+
+export function isValidDestination(value: string): boolean {
+  return isAbsoluteDestination(value) || isManagedDestination(value);
+}
+
 export function isDangerousAction(action: Action): boolean {
   return action.type === 'delete' || action.type === 'runCommand';
 }
@@ -74,9 +94,7 @@ export function isValidRule(rule: Pick<Rule, 'name' | 'conditions' | 'action'>):
   if (!rule.name.trim() || rule.name.trim().length > 100) return false;
   if (rule.conditions.length === 0 || !rule.conditions.every(isValidCondition)) return false;
   if (rule.action.type === 'move') {
-    return (
-      Boolean(rule.action.destination.trim()) && isAbsoluteDestination(rule.action.destination)
-    );
+    return Boolean(rule.action.destination.trim()) && isValidDestination(rule.action.destination);
   }
   if (rule.action.type === 'runCommand') {
     const timeout = rule.action.timeoutMs ?? 30_000;
