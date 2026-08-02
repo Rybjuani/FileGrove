@@ -55,6 +55,7 @@ pub struct JournaledUndoEntry {
     pub entry: UndoEntry,
     pub operation_id: Option<Uuid>,
     pub state: UndoJournalState,
+    conflict_behavior: String,
     pub backup_path: Option<PathBuf>,
     pub had_destination: bool,
     seq: i64,
@@ -141,6 +142,7 @@ impl UndoRepo {
             entry,
             operation_id: Some(operation_id),
             state: UndoJournalState::Pending,
+            conflict_behavior: behavior.to_owned(),
             backup_path: backup_path.map(Path::to_path_buf),
             had_destination,
             seq: next_seq,
@@ -188,7 +190,7 @@ impl UndoRepo {
         let conn = self.conn.lock();
         let mut statement = conn.prepare(
             "SELECT session_id, at, from_path, to_path, seq, operation_id, state, \
-                    backup_path, had_destination \
+                    conflict_behavior, backup_path, had_destination \
              FROM undo_entries WHERE session_id = ?1 ORDER BY seq DESC",
         )?;
         let rows = statement.query_map([session_id.to_string()], parse_journal_row)?;
@@ -313,7 +315,7 @@ impl UndoRepo {
             let conn = self.conn.lock();
             let mut statement = conn.prepare(
                 "SELECT session_id, at, from_path, to_path, seq, operation_id, state, \
-                        backup_path, had_destination \
+                        conflict_behavior, backup_path, had_destination \
                  FROM undo_entries ORDER BY session_id, seq",
             )?;
             let rows = statement.query_map([], parse_journal_row)?;
@@ -325,8 +327,67 @@ impl UndoRepo {
                 UndoJournalState::Pending => self.reconcile_pending(&entry)?,
                 UndoJournalState::Applied => self.reconcile_applied(&entry)?,
                 UndoJournalState::Undoing => self.reconcile_undoing(&entry)?,
-                UndoJournalState::Review => {}
+                UndoJournalState::Review => self.reconcile_review(&entry)?,
             }
+        }
+        Ok(())
+    }
+
+    /// Repair rows written by the Linux recovery build that confused a
+    /// rename conflict with an overwrite. The signature is deliberately
+    /// narrow: rename mode, a claimed prior destination, and no backup.
+    /// Ambiguous filesystem states remain in review.
+    fn reconcile_review(&self, entry: &JournaledUndoEntry) -> Result<()> {
+        if entry.conflict_behavior != "rename"
+            || !entry.had_destination
+            || entry.backup_path.is_some()
+        {
+            return Ok(());
+        }
+
+        let source = file_state(Path::new(&entry.from_path))?;
+        let destination = file_state(Path::new(&entry.to_path))?;
+        match (source, destination) {
+            (FileState::Missing, FileState::Regular) => {
+                self.repair_legacy_rename_entry(entry, UndoJournalState::Applied)?;
+                tracing::info!(
+                    session_id = ?entry.session_id,
+                    operation_id = ?entry.operation_id,
+                    "recovered legacy rename entry for automatic undo"
+                );
+            }
+            (FileState::Regular, FileState::Missing) => {
+                // The move never started, or its undo already completed.
+                self.delete_entry(entry)?;
+            }
+            (FileState::Regular, FileState::Regular)
+                if same_file::is_same_file(&entry.from_path, &entry.to_path).unwrap_or(false) =>
+            {
+                // Interrupted hard-link publication left two names for the
+                // same file. Preserve the origin and remove only our target.
+                remove_regular_file(Path::new(&entry.to_path))?;
+                self.delete_entry(entry)?;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    fn repair_legacy_rename_entry(
+        &self,
+        entry: &JournaledUndoEntry,
+        state: UndoJournalState,
+    ) -> Result<()> {
+        let conn = self.conn.lock();
+        let changed = conn.execute(
+            "UPDATE undo_entries SET state = ?1, had_destination = 0 \
+             WHERE session_id = ?2 AND seq = ?3 AND state = 'review' \
+               AND conflict_behavior = 'rename' AND had_destination = 1 \
+               AND backup_path IS NULL",
+            rusqlite::params![state.as_str(), entry.session_id.to_string(), entry.seq],
+        )?;
+        if changed != 1 {
+            return Err(anyhow!("UNDO_JOURNAL_ENTRY_NOT_FOUND"));
         }
         Ok(())
     }
@@ -492,7 +553,8 @@ fn parse_journal_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<JournaledUndoE
     let at_text: String = row.get(1)?;
     let operation_id_text: Option<String> = row.get(5)?;
     let state_text: String = row.get(6)?;
-    let backup_path: Option<String> = row.get(7)?;
+    let conflict_behavior: String = row.get(7)?;
+    let backup_path: Option<String> = row.get(8)?;
     let session_id = Uuid::parse_str(&session_id_text).map_err(|error| {
         rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(error))
     })?;
@@ -526,8 +588,9 @@ fn parse_journal_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<JournaledUndoE
         },
         operation_id,
         state: UndoJournalState::parse(&state_text),
+        conflict_behavior,
         backup_path: backup_path.map(PathBuf::from),
-        had_destination: row.get::<_, i64>(8)? != 0,
+        had_destination: row.get::<_, i64>(9)? != 0,
         seq: row.get(4)?,
     })
 }
@@ -758,6 +821,47 @@ mod tests {
         assert_eq!(fs::read(&source).unwrap(), b"source");
         assert_eq!(fs::read(&destination).unwrap(), b"external");
         assert!(database.undo().ensure_source_available(&source).is_err());
+    }
+
+    #[test]
+    fn legacy_rename_misclassified_as_overwrite_recovers_for_undo() {
+        let (directory, database) = database();
+        let source = directory.path().join("source.txt");
+        let occupied = directory.path().join("report.txt");
+        fs::write(&source, b"new").unwrap();
+        fs::write(&occupied, b"old").unwrap();
+        let prepared = ready_move(&source, &occupied, ConflictBehavior::Rename);
+        let actual_destination = prepared.destination().to_path_buf();
+        let session_id = Uuid::new_v4();
+
+        // Reproduce the recovery build bug: rename mode selected a fresh path,
+        // but the journal claimed that fresh path had been overwritten.
+        let legacy_journal = database
+            .undo()
+            .prepare_move(
+                session_id,
+                prepared.source(),
+                prepared.destination(),
+                prepared.behavior(),
+                None,
+                true,
+            )
+            .unwrap();
+        execute_prepared_move(prepared).unwrap();
+        database.undo().mark_applied(&legacy_journal).unwrap();
+
+        // First reconciliation observes the impossible missing backup and
+        // conservatively marks review. The next pass recognizes only the
+        // exact legacy signature and makes it undoable again.
+        database.undo().reconcile().unwrap();
+        let reviewed = database.undo().read_reverse(session_id).unwrap();
+
+        assert_eq!(reviewed.len(), 1);
+        assert_eq!(reviewed[0].state, UndoJournalState::Applied);
+        assert!(!reviewed[0].had_destination);
+        assert!(!source.exists());
+        assert_eq!(fs::read(actual_destination).unwrap(), b"new");
+        assert_eq!(fs::read(occupied).unwrap(), b"old");
     }
 
     #[test]

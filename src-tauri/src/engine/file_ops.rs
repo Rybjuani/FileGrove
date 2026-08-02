@@ -84,12 +84,12 @@ pub fn prepare_move(
         return Err(anyhow!("INVALID_DESTINATION"));
     }
 
-    let had_destination = path_exists(requested_destination)?;
-    if had_destination {
+    let requested_destination_exists = path_exists(requested_destination)?;
+    if requested_destination_exists {
         ensure_regular_file(requested_destination, "DESTINATION_UNSAFE")?;
     }
 
-    let destination = match (behavior, had_destination) {
+    let destination = match (behavior, requested_destination_exists) {
         (ConflictBehavior::Skip, true) => return Ok(PrepareMoveOutcome::Skipped),
         (ConflictBehavior::Rename, true) => available_renamed_path(requested_destination)?,
         _ => requested_destination.to_path_buf(),
@@ -97,21 +97,25 @@ pub fn prepare_move(
     if destination == source {
         return Err(anyhow!("SOURCE_EQUALS_DESTINATION"));
     }
-    let overwrite_backup = if behavior == ConflictBehavior::Overwrite && had_destination {
-        Some(unique_managed_path(
-            requested_destination,
-            "overwrite-backup",
-        ))
-    } else {
-        None
-    };
+    let overwrite_backup =
+        if behavior == ConflictBehavior::Overwrite && requested_destination_exists {
+            Some(unique_managed_path(
+                requested_destination,
+                "overwrite-backup",
+            ))
+        } else {
+            None
+        };
 
     Ok(PrepareMoveOutcome::Ready(PreparedMove {
         source: source.to_path_buf(),
         destination,
         behavior,
         overwrite_backup,
-        had_destination,
+        // This flag describes the selected destination, not whether the
+        // originally requested name happened to be occupied. Rename mode
+        // chooses a fresh path and therefore never needs an overwrite backup.
+        had_destination: behavior == ConflictBehavior::Overwrite && requested_destination_exists,
     }))
 }
 
@@ -407,5 +411,24 @@ mod tests {
         assert_eq!(fs::read(destination).unwrap(), b"old");
         assert_eq!(fs::read(actual).unwrap(), b"new");
         assert!(!source.exists());
+    }
+
+    #[test]
+    fn renamed_conflict_is_not_recorded_as_an_overwrite() {
+        let temp = tempfile::tempdir().unwrap();
+        let source = temp.path().join("source.txt");
+        let destination = temp.path().join("report.txt");
+        fs::write(&source, b"new").unwrap();
+        fs::write(&destination, b"old").unwrap();
+
+        let PrepareMoveOutcome::Ready(prepared) =
+            prepare_move(&source, &destination, ConflictBehavior::Rename).unwrap()
+        else {
+            panic!("rename conflict was skipped")
+        };
+
+        assert_eq!(prepared.destination(), temp.path().join("report (1).txt"));
+        assert!(!prepared.had_destination());
+        assert!(prepared.overwrite_backup().is_none());
     }
 }
