@@ -1,4 +1,4 @@
-# FileGrove
+# FileGrove 🌳📁
 
 > Smart, simple file organization for everyone. Open-source desktop app
 > that watches your folders and organizes files automatically based on
