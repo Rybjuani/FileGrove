@@ -27,7 +27,8 @@ See `docs/SPEC.md` §3.3 for the full layout. The short version:
 
 ## Development workflow
 
-1. Pick one of the pending items in `docs/M1_ISSUES.md`.
+1. Pick one of the pending items in `docs/ROADMAP_1_0.md` or the ordered
+   checklist in `docs/HANDOFF_2026-08-08.md`.
 2. Branch: `git checkout -b feat/short-description`.
 3. Code. Run checks locally:
    ```bash
@@ -37,8 +38,10 @@ See `docs/SPEC.md` §3.3 for the full layout. The short version:
 4. Commit using
    [conventional commits](https://www.conventionalcommits.org/):
    `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`.
-5. Keep the commit local until the project is ready for GitHub. Once remote
-   collaboration starts, open a PR and require all checks to pass before merge.
+5. Push the feature branch, open a PR, and require all checks to pass before
+   merge. Maintainer-directed recovery work may land directly on
+   `linux-recovery` only when it is staged explicitly, atomic, and followed by
+   green CI.
 
 ## Code style
 
@@ -46,8 +49,8 @@ See `docs/SPEC.md` §3.3 for the full layout. The short version:
   with `anyhow`/`thiserror`.
 - **TypeScript**: strict mode, no `any` without justification,
   `eslint --max-warnings 0`.
-- **Commits**: 72-char subject, imperative mood, body explains *why*
-  not *what*.
+- **Commits**: 72-char subject, imperative mood, body explains _why_
+  not _what_.
 
 ## Tests
 
@@ -76,7 +79,8 @@ Record a local bug report with:
 - OS + version
 - Steps to reproduce
 - Expected vs actual behavior
-- Logs from `<app_data_dir>/logs/` (if relevant)
+- Redacted terminal diagnostic output (the current build does not create a
+  persistent FileGrove log file by default)
 
 ## Code of conduct
 

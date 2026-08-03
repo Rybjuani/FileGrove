@@ -9,9 +9,11 @@ code from the original product. The implementation is based solely on
 observed behavior of the original binary release, documented in
 `docs/SPEC.md`.
 
-We acknowledge the original author for the product idea, the thoughtful
-UX design, and the choice to release under an open-source license (MIT).
-Without that foundation, FileGrove would not exist.
+We acknowledge the original author for the product idea and thoughtful UX
+design. The distributed reference package declared MIT license metadata, but
+its source code was not available; FileGrove therefore uses an independently
+written clean-room implementation. Without that product foundation, FileGrove
+would not exist.
 
 ## Contributors
 
@@ -19,8 +21,9 @@ Without that foundation, FileGrove would not exist.
 
 ## Acknowledgements
 
-Thanks to the maintainers and contributors of all the open-source
-projects FileGrove depends on. See `NOTICE` for the full list.
+Thanks to the maintainers and contributors of all the open-source projects
+FileGrove depends on. `NOTICE` lists the principal projects; a complete locked
+dependency license inventory must be generated for the public release.
 
 ## License
 

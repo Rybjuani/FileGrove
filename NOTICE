@@ -24,7 +24,12 @@ If you distribute a modified version of FileGrove, you must:
 
 ================================================================================
 
-THIRD-PARTY NOTICES
+PRINCIPAL THIRD-PARTY NOTICES
+
+The list below names principal projects used directly by FileGrove; it is not
+an exhaustive transcription of every transitive package in the Rust and npm
+lockfiles. A complete locked dependency license inventory must accompany the
+public release.
 
 This software depends on the following open-source projects:
 
@@ -50,8 +55,8 @@ Frontend (TypeScript/React):
   - vite            — MIT            — https://vitejs.dev
   - typescript      — Apache 2.0     — https://www.typescriptlang.org
 
-Each dependency retains its own license; see each project's repository
-for full terms.
+Each dependency retains its own license; see its repository and the exact
+locked release inventory for full terms.
 
 ================================================================================
 

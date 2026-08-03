@@ -65,6 +65,10 @@ Output: `src-tauri/target/release/bundle/`
 - [`docs/SPEC.md`](docs/SPEC.md) — Full behavioral specification
 - [`docs/ROADMAP_1_0.md`](docs/ROADMAP_1_0.md) — Linux release gates through 1.0
 - [`docs/HANDOFF_2026-08-08.md`](docs/HANDOFF_2026-08-08.md) — Exact continuation checklist and release blockers
+- [`docs/INSTALL_LINUX.md`](docs/INSTALL_LINUX.md) — `.deb`, AppImage, runtime requirements, and current compatibility evidence
+- [`docs/SAFE_USE.md`](docs/SAFE_USE.md) — Safe first run, Automatic mode, conflicts, and destructive actions
+- [`docs/RECOVERY.md`](docs/RECOVERY.md) — Historical Undo, interrupted actions, Trash, and state backups
+- [`docs/SECURITY.md`](docs/SECURITY.md) and [`docs/PRIVACY.md`](docs/PRIVACY.md) — Security boundaries and local-data policy
 - [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — How to contribute
 
 ## Roadmap

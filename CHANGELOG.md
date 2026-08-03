@@ -54,6 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   motion support, complete control labels, and safer light-theme contrast
 - Audited Linux 1.0 handoff separating current requirements from historical
   specification parity, with package, safety-test, documentation, and release checklists
+- Linux release documentation for installation, safe operation, recovery,
+  security, privacy, package metadata, compatibility evidence, and contributor workflow
 
 ### Local-testing status
 
