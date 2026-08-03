@@ -69,6 +69,7 @@ Output: `src-tauri/target/release/bundle/`
 - [`docs/SAFE_USE.md`](docs/SAFE_USE.md) — Safe first run, Automatic mode, conflicts, and destructive actions
 - [`docs/RECOVERY.md`](docs/RECOVERY.md) — Historical Undo, interrupted actions, Trash, and state backups
 - [`docs/SECURITY.md`](docs/SECURITY.md) and [`docs/PRIVACY.md`](docs/PRIVACY.md) — Security boundaries and local-data policy
+- [`docs/COMPETITIVE_POSITIONING.md`](docs/COMPETITIVE_POSITIONING.md) — Free capability parity target and FileGrove differentiators
 - [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — How to contribute
 
 ## Roadmap
