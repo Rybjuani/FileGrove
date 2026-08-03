@@ -29,8 +29,11 @@ export function OnboardingDialog({ saving, onComplete }: Props) {
         aria-describedby="onboarding-intro"
         tabIndex={-1}
       >
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent-500/15 text-accent-300">
+        <div className="relative mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent-500/15 text-accent-300">
           <ShieldCheck size={25} aria-hidden="true" />
+          <span className="absolute -right-2 -top-2 text-sm" aria-hidden="true">
+            🌳
+          </span>
         </div>
         <h1
           id="onboarding-title"
@@ -50,6 +53,11 @@ export function OnboardingDialog({ saving, onComplete }: Props) {
             <li key={key} className="rounded-lg border border-primary-800 bg-primary-950/50 p-4">
               <div className="flex items-center justify-between text-accent-300">
                 <Icon size={20} aria-hidden="true" />
+                {key === 'folder' && (
+                  <span className="mr-auto ml-1 text-sm" aria-hidden="true">
+                    📁
+                  </span>
+                )}
                 <span className="text-xs font-semibold" aria-hidden="true">
                   {index + 1}
                 </span>
