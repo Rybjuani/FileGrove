@@ -256,14 +256,14 @@
     "pagination": "Activity pages",
     "sourcePath": "Original path",
     "status": "Status",
-    "statusFilter": "Result",
-    "subtitle": "Every file FileGrove has touched, newest first",
+    "statusFilter": "Show",
+    "subtitle": "A clear summary of your latest file activity",
     "succeeded": "Success",
     "tableCaption": "File activity recorded by FileGrove",
     "title": "Activity history",
     "trashHint": "The file can be restored manually from the Recycle Bin.",
     "type": "Type",
-    "typeFilter": "Action type",
+    "typeFilter": "Action",
     "when": "When"
   },
   "quickRules": {

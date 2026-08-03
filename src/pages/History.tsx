@@ -172,16 +172,15 @@ export function History({ onNavigateToRules }: Props) {
       ) : (
         <div className="card overflow-hidden p-0">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
+            <table className="w-full min-w-[560px] table-fixed text-left text-sm">
               <caption className="sr-only">{t('history.tableCaption')}</caption>
               <thead className="border-b border-primary-800 bg-primary-950/50 text-xs uppercase text-primary-500">
                 <tr>
                   <th className="w-9 px-3 py-3" aria-label={t('history.details')} />
-                  <th className="px-3 py-3">{t('activity.file')}</th>
-                  <th className="px-3 py-3">{t('activity.ruleLabel')}</th>
-                  <th className="px-3 py-3">{t('history.type')}</th>
-                  <th className="px-3 py-3">{t('history.when')}</th>
-                  <th className="px-3 py-3 text-right">{t('history.status')}</th>
+                  <th className="w-[42%] px-3 py-3">{t('activity.file')}</th>
+                  <th className="w-[22%] px-3 py-3">{t('history.type')}</th>
+                  <th className="w-[22%] px-3 py-3">{t('history.when')}</th>
+                  <th className="w-[14%] px-3 py-3 text-right">{t('history.status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -280,13 +279,15 @@ function HistoryRow({
             )}
           </button>
         </td>
-        <td className="max-w-64 truncate px-3 py-3 text-primary-200" title={item.filePath}>
-          {item.fileName}
+        <td className="truncate px-3 py-3 text-primary-200" title={item.filePath}>
+          <p className="truncate">{item.fileName}</p>
+          {item.ruleName && (
+            <p className="mt-0.5 truncate text-xs text-primary-500">{item.ruleName}</p>
+          )}
         </td>
-        <td className="px-3 py-3 text-primary-400">{item.ruleName ?? '—'}</td>
         <td className="px-3 py-3 text-primary-400">{t(`activity.type.${item.type}`)}</td>
         <td className="px-3 py-3 text-xs text-primary-500">
-          {new Intl.DateTimeFormat(locale, { dateStyle: 'short', timeStyle: 'medium' }).format(
+          {new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(
             new Date(item.at),
           )}
         </td>
@@ -301,7 +302,7 @@ function HistoryRow({
           id={`activity-${item.id}-details`}
           className="border-b border-primary-800 bg-primary-950/40"
         >
-          <td colSpan={6} className="px-5 py-4">
+          <td colSpan={5} className="px-5 py-4">
             <ActivityDetails item={item} />
           </td>
         </tr>

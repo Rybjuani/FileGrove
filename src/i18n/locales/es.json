@@ -256,14 +256,14 @@
     "pagination": "Páginas de actividad",
     "sourcePath": "Ruta original",
     "status": "Estado",
-    "statusFilter": "Resultado",
-    "subtitle": "Todos los archivos que FileGrove ha procesado, del más reciente al más antiguo",
+    "statusFilter": "Mostrar",
+    "subtitle": "Un resumen claro de tus acciones recientes con archivos",
     "succeeded": "Correcto",
     "tableCaption": "Actividad de archivos registrada por FileGrove",
     "title": "Historial de actividad",
     "trashHint": "Puede restaurarse manualmente desde la papelera.",
     "type": "Tipo",
-    "typeFilter": "Tipo de acción",
+    "typeFilter": "Acción",
     "when": "Fecha y hora"
   },
   "quickRules": {
