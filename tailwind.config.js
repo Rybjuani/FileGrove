@@ -38,6 +38,13 @@ export default {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
       },
+      borderRadius: {
+        DEFAULT: '0.625rem',
+        sm: '0.625rem',
+        md: '0.75rem',
+        lg: '1rem',
+        xl: '1.25rem',
+      },
     },
   },
   plugins: [],

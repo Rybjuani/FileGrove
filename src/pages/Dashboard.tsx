@@ -79,7 +79,7 @@ export function Dashboard({ onNavigateToRules, onNavigateToHistory: _ }: Props) 
               {t('dashboard.noMatches', { query })}
             </div>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-4 xl:grid-cols-2">
               {filtered.map((folder) => (
                 <FolderCard key={folder.id} folder={folder} onNavigateToRules={onNavigateToRules} />
               ))}

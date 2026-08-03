@@ -232,13 +232,13 @@ function Toggle({
         aria-label={label}
         disabled={disabled}
         onClick={() => onChange(!value)}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+        className={`relative h-7 w-12 shrink-0 rounded-full shadow-inner transition-all duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
           value ? 'bg-accent-600' : 'bg-primary-700'
         }`}
       >
         <span
           aria-hidden="true"
-          className={`absolute left-0.5 top-0.5 inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+          className={`absolute left-0.5 top-0.5 inline-block h-6 w-6 transform rounded-full bg-white shadow-sm transition-transform ${
             value ? 'translate-x-5' : ''
           }`}
         />
