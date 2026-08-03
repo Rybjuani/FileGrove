@@ -52,6 +52,7 @@ export function Settings() {
         <Field label={t('settings.theme')}>
           <select
             className="input"
+            aria-label={t('settings.theme')}
             value={s?.theme ?? 'dark'}
             disabled={saving === 'theme'}
             onChange={(event) =>
@@ -68,6 +69,7 @@ export function Settings() {
         <Field label={t('settings.language')} desc={t('settings.languageDesc')}>
           <select
             className="input"
+            aria-label={t('settings.language')}
             value={s?.language ?? 'en'}
             disabled={saving === 'language'}
             onChange={(event) => {
@@ -111,6 +113,7 @@ export function Settings() {
         <Field label={t('settings.conflictBehavior')} desc={t('settings.conflictBehaviorDesc')}>
           <select
             className="input"
+            aria-label={t('settings.conflictBehavior')}
             value={s?.conflictBehavior ?? 'rename'}
             disabled={saving === 'conflictBehavior'}
             onChange={(event) => {
@@ -139,6 +142,7 @@ export function Settings() {
         <Field label={t('settings.duplicateBehavior')} desc={t('settings.duplicateBehaviorDesc')}>
           <select
             className="input"
+            aria-label={t('settings.duplicateBehavior')}
             value={s?.duplicateBehavior ?? 'keepBoth'}
             disabled={saving === 'duplicateBehavior'}
             onChange={(event) => {
@@ -192,12 +196,12 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0 flex-1">
         <p className="text-sm text-primary-200">{label}</p>
         {desc && <p className="mt-1 text-xs text-primary-500">{desc}</p>}
       </div>
-      <div className="w-48 shrink-0">{children}</div>
+      <div className="w-full sm:w-48 sm:shrink-0">{children}</div>
     </div>
   );
 }
@@ -233,6 +237,7 @@ function Toggle({
         }`}
       >
         <span
+          aria-hidden="true"
           className={`absolute left-0.5 top-0.5 inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
             value ? 'translate-x-5' : ''
           }`}

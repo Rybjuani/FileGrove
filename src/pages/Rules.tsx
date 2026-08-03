@@ -141,12 +141,16 @@ export function Rules() {
             );
             return (
               <button
+                type="button"
                 key={template.key}
                 className="card flex items-center gap-3 p-3 text-left transition-colors hover:border-primary-700 hover:bg-primary-800/50"
                 onClick={() => void installTemplate(template)}
                 disabled={creatingTemplate !== null}
               >
-                <span className="rounded-md bg-accent-500/10 p-2 text-accent-400">
+                <span
+                  className="rounded-md bg-accent-500/10 p-2 text-accent-400"
+                  aria-hidden="true"
+                >
                   <Icon size={18} />
                 </span>
                 <span className="min-w-0 flex-1">
@@ -158,9 +162,12 @@ export function Rules() {
                   </span>
                 </span>
                 {installed ? (
-                  <Check size={15} className="text-accent-400" />
+                  <>
+                    <Check size={15} className="text-accent-400" aria-hidden="true" />
+                    <span className="sr-only">{t('rules.templateInstalled')}</span>
+                  </>
                 ) : (
-                  <Plus size={14} className="text-primary-500" />
+                  <Plus size={14} className="text-primary-500" aria-hidden="true" />
                 )}
               </button>
             );
@@ -173,6 +180,7 @@ export function Rules() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-500" />
           <input
             className="input pl-9"
+            aria-label={t('rules.searchPlaceholder')}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t('rules.searchPlaceholder')}
@@ -288,26 +296,28 @@ function RuleRow({
 }) {
   const { t } = useTranslation();
   return (
-    <div className={`card flex items-center gap-3 ${rule.enabled ? '' : 'opacity-60'}`}>
+    <article className={`card flex items-center gap-3 ${rule.enabled ? '' : 'opacity-60'}`}>
       <div className="flex shrink-0 flex-col">
         <button
+          type="button"
           className="rounded p-1 text-primary-500 hover:bg-primary-800 hover:text-primary-200 disabled:opacity-25"
           onClick={() => onMove(-1)}
           disabled={disabled || first}
           aria-label={t('rules.moveUp')}
         >
-          <ArrowUp size={14} />
+          <ArrowUp size={14} aria-hidden="true" />
         </button>
         <button
+          type="button"
           className="rounded p-1 text-primary-500 hover:bg-primary-800 hover:text-primary-200 disabled:opacity-25"
           onClick={() => onMove(1)}
           disabled={disabled || last}
           aria-label={t('rules.moveDown')}
         >
-          <ArrowDown size={14} />
+          <ArrowDown size={14} aria-hidden="true" />
         </button>
       </div>
-      <button className="min-w-0 flex-1 text-left" onClick={onEdit}>
+      <button type="button" className="min-w-0 flex-1 text-left" onClick={onEdit}>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium text-primary-100">{rule.name}</span>
           {rule.isQuickRule && <span className="badge-warning">{t('rules.quick')}</span>}
@@ -323,25 +333,33 @@ function RuleRow({
         </p>
       </button>
       <div className="flex items-center gap-1">
-        <button className="btn-ghost p-2" onClick={onEdit} title={t('common.edit')}>
-          <Edit3 size={15} />
+        <button
+          type="button"
+          className="btn-ghost p-2"
+          onClick={onEdit}
+          aria-label={`${t('common.edit')}: ${rule.name}`}
+        >
+          <Edit3 size={15} aria-hidden="true" />
         </button>
         <button
+          type="button"
           className={`btn-ghost p-2 ${rule.enabled ? 'text-accent-400' : 'text-primary-500'}`}
           onClick={onToggle}
-          title={rule.enabled ? t('rules.disable') : t('rules.enable')}
+          aria-label={`${rule.enabled ? t('rules.disable') : t('rules.enable')}: ${rule.name}`}
+          aria-pressed={rule.enabled}
         >
-          <Power size={15} />
+          <Power size={15} aria-hidden="true" />
         </button>
         <button
+          type="button"
           className="btn-ghost p-2 text-red-400"
           onClick={onDelete}
-          title={t('common.delete')}
+          aria-label={`${t('common.delete')}: ${rule.name}`}
         >
-          <Trash2 size={15} />
+          <Trash2 size={15} aria-hidden="true" />
         </button>
       </div>
-    </div>
+    </article>
   );
 }
 

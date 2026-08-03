@@ -41,6 +41,7 @@
     "loading": "Cargando…",
     "save": "Guardar",
     "saving": "Guardando…",
+    "skipToContent": "Saltar al contenido principal",
     "yes": "Sí"
   },
   "dashboard": {
@@ -232,6 +233,7 @@
     "allTypes": "Todos los tipos de acción",
     "clearAll": "Borrar todo",
     "clearConfirm": "¿Eliminar todo el historial de actividad? Esta acción no se puede deshacer.",
+    "collapseDetails": "Ocultar detalles de {{file}}",
     "command": "Comando",
     "allowCommandRetry": "Permitir un reintento",
     "allowCommandRetryConfirm": "¿Permitir que este comando vuelva a ejecutarse la próxima vez que se procese el archivo? Continúa solo si verificaste que el intento interrumpido no completó ya su acción externa.",
@@ -244,17 +246,20 @@
     "empty": "Aún no hay actividad",
     "emptyDesc": "Cuando organices archivos, aparecerán aquí.",
     "error": "Error",
+    "expandDetails": "Mostrar detalles de {{file}}",
     "failed": "Falló",
     "filterAll": "Todo",
     "filterFailure": "Con errores",
     "filterSuccess": "Correctos",
     "noOutput": "(sin salida)",
     "note": "Nota",
+    "pagination": "Páginas de actividad",
     "sourcePath": "Ruta original",
     "status": "Estado",
     "statusFilter": "Resultado",
     "subtitle": "Todos los archivos que FileGrove ha procesado, del más reciente al más antiguo",
     "succeeded": "Correcto",
+    "tableCaption": "Actividad de archivos registrada por FileGrove",
     "title": "Historial de actividad",
     "trashHint": "Puede restaurarse manualmente desde la papelera.",
     "type": "Tipo",
@@ -335,6 +340,7 @@
     "enabledOnSave": "Activar esta regla",
     "hideAdvanced": "Ocultar opciones avanzadas",
     "form": {
+      "actionTypeLabel": "Acción de la regla",
       "conditionLabels": {
         "extension": "Archivos con extensión",
         "nameContains": "Archivos cuyo nombre contiene",
@@ -347,6 +353,7 @@
         "sizeLessThan": "Archivos menores que (MB)"
       },
       "conditionRowLabel": "Condición {{index}}",
+      "conditionValueLabel": "Valor de la condición {{index}}",
       "label": {
         "allOfThese": "Cuando TODAS estas condiciones se cumplan:",
         "questionHeader": "¿A qué archivos debe aplicarse esta regla?"
@@ -380,6 +387,7 @@
     "showAdvanced": "Personalizar opciones",
     "subtitle": "Gestiona las reglas de organización. Asigna reglas a carpetas desde el Panel.",
     "templatesDesc": "Añade una tarea lista para usar. FileGrove creará su carpeta de destino automáticamente.",
+    "templateInstalled": "Ya añadida",
     "templatesTitle": "Plantillas rápidas",
     "title": "Reglas",
     "tokens": {
@@ -438,6 +446,7 @@
     "about": "Acerca de",
     "dashboard": "Panel",
     "history": "Historial",
+    "navigation": "Navegación principal",
     "rules": "Reglas",
     "settings": "Ajustes"
   },

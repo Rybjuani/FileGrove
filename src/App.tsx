@@ -90,6 +90,7 @@ export default function App() {
         >
           <span>{readableIpcError(error, t)}</span>
           <button
+            type="button"
             className="shrink-0 rounded p-1 hover:bg-red-500/10"
             onClick={clearError}
             aria-label={t('common.dismiss')}

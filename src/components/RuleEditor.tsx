@@ -13,6 +13,7 @@ import {
   suggestManagedDestination,
 } from '../lib/rules';
 import { useAppStore } from '../stores/useAppStore';
+import { useDialogFocus } from '../lib/dialog';
 
 interface Props {
   rule?: Rule;
@@ -40,6 +41,7 @@ const DESTINATION_TOKENS = [
 
 export function RuleEditor({ rule, nextOrder, createAsNew = false, onClose }: Props) {
   const { t } = useTranslation();
+  const dialogRef = useDialogFocus<HTMLFormElement>(onClose);
   const { createRule, updateRule } = useAppStore();
   const [name, setName] = useState(rule?.name ?? '');
   const [enabled, setEnabled] = useState(rule?.enabled ?? true);
@@ -166,18 +168,25 @@ export function RuleEditor({ rule, nextOrder, createAsNew = false, onClose }: Pr
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
       <form
+        ref={dialogRef}
         className="card max-h-[92vh] w-full max-w-3xl overflow-hidden p-0"
         role="dialog"
         aria-modal="true"
         aria-labelledby="rule-editor-title"
+        tabIndex={-1}
         onSubmit={(event) => void submit(event)}
       >
         <header className="flex items-center justify-between border-b border-primary-800 px-5 py-4">
           <h2 id="rule-editor-title" className="text-lg font-semibold text-primary-50">
             {title}
           </h2>
-          <button type="button" className="btn-ghost p-2" onClick={onClose}>
-            <X size={18} />
+          <button
+            type="button"
+            className="btn-ghost p-2"
+            onClick={onClose}
+            aria-label={t('common.close')}
+          >
+            <X size={18} aria-hidden="true" />
           </button>
         </header>
 
@@ -237,6 +246,7 @@ export function RuleEditor({ rule, nextOrder, createAsNew = false, onClose }: Pr
                 </select>
                 <input
                   className="input"
+                  aria-label={t('rules.form.conditionValueLabel', { index: index + 1 })}
                   value={conditionValueText(condition)}
                   onChange={(event) =>
                     updateCondition(index, {
@@ -271,6 +281,7 @@ export function RuleEditor({ rule, nextOrder, createAsNew = false, onClose }: Pr
                   type="button"
                   className="btn-ghost text-xs"
                   onClick={() => setAdvancedOpen((current) => !current)}
+                  aria-expanded={advancedOpen}
                 >
                   <Settings2 size={14} />
                   {t(advancedOpen ? 'rules.hideAdvanced' : 'rules.showAdvanced')}
@@ -280,6 +291,7 @@ export function RuleEditor({ rule, nextOrder, createAsNew = false, onClose }: Pr
             {advancedOpen ? (
               <select
                 className="input"
+                aria-label={t('rules.form.actionTypeLabel')}
                 value={action.type}
                 onChange={(event) => setActionType(event.target.value as Action['type'])}
               >

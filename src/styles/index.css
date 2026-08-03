@@ -84,6 +84,30 @@
   }
 }
 
+:is(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid rgb(var(--accent-400));
+  outline-offset: 3px;
+}
+
+:root.light :is(.text-red-200, .text-red-300, .text-red-400) {
+  color: rgb(185 28 28);
+}
+
+:root.light :is(.text-yellow-100, .text-yellow-200, .text-yellow-400, .text-amber-200) {
+  color: rgb(133 77 14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
 @layer components {
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium

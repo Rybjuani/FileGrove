@@ -19,7 +19,7 @@ export function About() {
 
       <div className="card flex items-center gap-4">
         <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-accent-600/20">
-          <Trees size={32} className="text-accent-400" />
+          <Trees size={32} className="text-accent-400" aria-hidden="true" />
         </div>
         <div>
           <h2 className="text-xl font-semibold text-primary-50">FileGrove</h2>
@@ -41,11 +41,12 @@ export function About() {
           {t('about.acknowledgements')}
         </h3>
         <p className="flex items-center gap-2 text-sm text-primary-300">
-          <HardDrive size={16} className="text-accent-400" /> {t('about.localBuild')}
+          <HardDrive size={16} className="text-accent-400" aria-hidden="true" />{' '}
+          {t('about.localBuild')}
         </p>
         <p className="text-xs text-primary-500">{t('about.localBuildDesc')}</p>
         <p className="flex items-center gap-2 text-xs text-primary-500">
-          <Heart size={14} /> {t('about.openSource')}
+          <Heart size={14} aria-hidden="true" /> {t('about.openSource')}
         </p>
       </div>
     </div>

@@ -21,24 +21,32 @@ export function MainLayout({ currentPage, onNavigate, children }: Props) {
 
   return (
     <div className="flex h-screen overflow-hidden bg-primary-950 text-primary-50">
+      <a
+        href="#main-content"
+        className="fixed left-4 top-4 z-[100] -translate-y-24 rounded-md bg-accent-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition-transform focus:translate-y-0"
+      >
+        {t('common.skipToContent')}
+      </a>
       {/* Sidebar */}
       <aside className="flex w-56 flex-col border-r border-primary-800 bg-primary-900">
         <div className="flex items-center gap-2 px-5 py-5">
-          <Trees size={22} className="text-accent-500" />
+          <Trees size={22} className="text-accent-500" aria-hidden="true" />
           <span className="text-lg font-semibold">FileGrove</span>
         </div>
-        <nav className="flex-1 space-y-1 px-3">
+        <nav className="flex-1 space-y-1 px-3" aria-label={t('sidebar.navigation')}>
           {navItems.map((item) => (
             <button
+              type="button"
               key={item.id}
               onClick={() => onNavigate(item.id)}
+              aria-current={currentPage === item.id ? 'page' : undefined}
               className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors ${
                 currentPage === item.id
                   ? 'bg-accent-600/20 text-accent-300'
                   : 'text-primary-300 hover:bg-primary-800 hover:text-primary-100'
               }`}
             >
-              {item.icon}
+              <span aria-hidden="true">{item.icon}</span>
               <span>{item.label}</span>
             </button>
           ))}
@@ -47,7 +55,7 @@ export function MainLayout({ currentPage, onNavigate, children }: Props) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
+      <main id="main-content" className="flex-1 overflow-y-auto" tabIndex={-1}>
         <div className="mx-auto max-w-6xl px-8 py-8">{children}</div>
       </main>
     </div>

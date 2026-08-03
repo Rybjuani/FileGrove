@@ -173,6 +173,7 @@ export function History({ onNavigateToRules }: Props) {
         <div className="card overflow-hidden p-0">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-sm">
+              <caption className="sr-only">{t('history.tableCaption')}</caption>
               <thead className="border-b border-primary-800 bg-primary-950/50 text-xs uppercase text-primary-500">
                 <tr>
                   <th className="w-9 px-3 py-3" aria-label={t('history.details')} />
@@ -202,7 +203,11 @@ export function History({ onNavigateToRules }: Props) {
 
           <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-primary-800 px-4 py-3">
             <p className="text-xs text-primary-500">{t('activity.total', { count: total })}</p>
-            <div className="flex items-center gap-3">
+            <div
+              className="flex items-center gap-3"
+              role="navigation"
+              aria-label={t('history.pagination')}
+            >
               <label className="flex items-center gap-2 text-xs text-primary-500">
                 {t('activity.perPage')}
                 <select
@@ -256,12 +261,24 @@ function HistoryRow({
   const { t } = useTranslation();
   return (
     <>
-      <tr
-        className="cursor-pointer border-b border-primary-800/50 hover:bg-primary-800/20"
-        onClick={onToggle}
-      >
+      <tr className="border-b border-primary-800/50 hover:bg-primary-800/20">
         <td className="px-3 py-3 text-primary-500">
-          {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+          <button
+            type="button"
+            className="rounded p-2 hover:bg-primary-800 hover:text-primary-200"
+            onClick={onToggle}
+            aria-expanded={expanded}
+            aria-controls={`activity-${item.id}-details`}
+            aria-label={t(expanded ? 'history.collapseDetails' : 'history.expandDetails', {
+              file: item.fileName,
+            })}
+          >
+            {expanded ? (
+              <ChevronUp size={15} aria-hidden="true" />
+            ) : (
+              <ChevronDown size={15} aria-hidden="true" />
+            )}
+          </button>
         </td>
         <td className="max-w-64 truncate px-3 py-3 text-primary-200" title={item.filePath}>
           {item.fileName}
@@ -280,7 +297,10 @@ function HistoryRow({
         </td>
       </tr>
       {expanded && (
-        <tr className="border-b border-primary-800 bg-primary-950/40">
+        <tr
+          id={`activity-${item.id}-details`}
+          className="border-b border-primary-800 bg-primary-950/40"
+        >
           <td colSpan={6} className="px-5 py-4">
             <ActivityDetails item={item} />
           </td>

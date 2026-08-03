@@ -52,6 +52,7 @@ export function Dashboard({ onNavigateToRules, onNavigateToHistory: _ }: Props) 
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-primary-500" />
           <input
             className="input pl-9"
+            aria-label={t('dashboard.searchPlaceholder')}
             placeholder={t('dashboard.searchPlaceholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}

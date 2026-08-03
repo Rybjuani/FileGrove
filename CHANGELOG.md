@@ -49,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   workflow, recommended categories, Preview, pause, and historical Undo
 - Calmer dashboard hierarchy with wider folder cards, explicit primary and
   management actions, accessible progress feedback, and a dedicated Undo panel
+- Keyboard and screen-reader accessibility pass with trapped/restored dialog
+  focus, skip navigation, semantic table controls, visible focus, reduced
+  motion support, complete control labels, and safer light-theme contrast
 
 ### Local-testing status
 

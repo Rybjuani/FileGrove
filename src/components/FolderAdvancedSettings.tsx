@@ -19,6 +19,7 @@ export function FolderAdvancedSettings({ folder }: { folder: Folder }) {
   const [ruleIds, setRuleIds] = useState(folder.ruleIds);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const panelId = `folder-${folder.id}-advanced-settings`;
 
   useEffect(() => {
     setRecursive(folder.subfolders.enabled);
@@ -104,15 +105,20 @@ export function FolderAdvancedSettings({ folder }: { folder: Folder }) {
         className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
+        aria-controls={panelId}
       >
         <span className="flex items-center gap-2 text-xs font-medium text-primary-300">
-          <Settings2 size={14} /> {t('folderCard.advanced.title')}
+          <Settings2 size={14} aria-hidden="true" /> {t('folderCard.advanced.title')}
         </span>
-        {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        {open ? (
+          <ChevronUp size={14} aria-hidden="true" />
+        ) : (
+          <ChevronDown size={14} aria-hidden="true" />
+        )}
       </button>
 
       {open && (
-        <div className="space-y-5 border-t border-primary-800 p-3">
+        <div id={panelId} className="space-y-5 border-t border-primary-800 p-3">
           <section className="space-y-2">
             <p className="text-xs font-medium text-primary-300">
               {t('folderCard.advanced.assignedRules')}
@@ -232,7 +238,9 @@ export function FolderAdvancedSettings({ folder }: { folder: Folder }) {
 
           <div className="flex items-center justify-end gap-3">
             {saved && (
-              <span className="text-xs text-accent-400">{t('folderCard.advanced.saved')}</span>
+              <span className="text-xs text-accent-400" role="status" aria-live="polite">
+                {t('folderCard.advanced.saved')}
+              </span>
             )}
             <button
               type="button"

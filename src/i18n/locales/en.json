@@ -41,6 +41,7 @@
     "loading": "Loading…",
     "save": "Save",
     "saving": "Saving…",
+    "skipToContent": "Skip to main content",
     "yes": "Yes"
   },
   "dashboard": {
@@ -232,6 +233,7 @@
     "allTypes": "All action types",
     "clearAll": "Clear all",
     "clearConfirm": "Delete all activity history? This cannot be undone.",
+    "collapseDetails": "Hide details for {{file}}",
     "command": "Command",
     "allowCommandRetry": "Allow one retry",
     "allowCommandRetryConfirm": "Allow this command to run again the next time the file is processed? Only continue if you verified that the interrupted attempt did not already complete its external action.",
@@ -244,17 +246,20 @@
     "empty": "No activity yet",
     "emptyDesc": "Once you organize files, you'll see them here.",
     "error": "Error",
+    "expandDetails": "Show details for {{file}}",
     "failed": "Failed",
     "filterAll": "All",
     "filterFailure": "Failures only",
     "filterSuccess": "Successes only",
     "noOutput": "(no output)",
     "note": "Note",
+    "pagination": "Activity pages",
     "sourcePath": "Original path",
     "status": "Status",
     "statusFilter": "Result",
     "subtitle": "Every file FileGrove has touched, newest first",
     "succeeded": "Success",
+    "tableCaption": "File activity recorded by FileGrove",
     "title": "Activity history",
     "trashHint": "The file can be restored manually from the Recycle Bin.",
     "type": "Type",
@@ -335,6 +340,7 @@
     "enabledOnSave": "Enable this rule",
     "hideAdvanced": "Hide advanced options",
     "form": {
+      "actionTypeLabel": "Rule action",
       "conditionLabels": {
         "extension": "Extension is one of",
         "nameContains": "Name contains",
@@ -347,6 +353,7 @@
         "sizeLessThan": "Size less than (MB)"
       },
       "conditionRowLabel": "Condition {{index}}",
+      "conditionValueLabel": "Value for condition {{index}}",
       "label": {
         "allOfThese": "When ALL of these conditions are met:",
         "questionHeader": "Which files should this rule apply to?"
@@ -380,6 +387,7 @@
     "showAdvanced": "Customize options",
     "subtitle": "Manage your organization rules. Assign rules to folders from the Dashboard.",
     "templatesDesc": "Add a ready-to-use task. FileGrove creates its destination folder automatically.",
+    "templateInstalled": "Already added",
     "templatesTitle": "Quick templates",
     "title": "Rules",
     "tokens": {
@@ -438,6 +446,7 @@
     "about": "About",
     "dashboard": "Dashboard",
     "history": "History",
+    "navigation": "Main navigation",
     "rules": "Rules",
     "settings": "Settings"
   },

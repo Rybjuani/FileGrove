@@ -28,6 +28,7 @@ import type {
 import { FolderAdvancedSettings } from './FolderAdvancedSettings';
 import { readableIpcError } from '../lib/errors';
 import { progressPercent } from '../lib/progress';
+import { useDialogFocus } from '../lib/dialog';
 
 interface Props {
   folder: Folder;
@@ -563,6 +564,7 @@ function PreviewDialog({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const dialogRef = useDialogFocus<HTMLElement>(onClose);
   const actionable = result?.plan.filter((item) => item.action) ?? [];
   const unmatched = (result?.plan.length ?? 0) - actionable.length;
   const groups = groupPreviewActions(actionable);
@@ -571,10 +573,12 @@ function PreviewDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
       <section
+        ref={dialogRef}
         className="card max-h-[85vh] w-full max-w-3xl overflow-hidden p-0"
         role="dialog"
         aria-modal="true"
         aria-labelledby="folder-preview-title"
+        tabIndex={-1}
       >
         <header className="flex items-center justify-between border-b border-primary-800 px-5 py-4">
           <h2 id="folder-preview-title" className="text-lg font-semibold text-primary-50">

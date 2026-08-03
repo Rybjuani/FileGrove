@@ -1,5 +1,6 @@
 import { FolderPlus, Play, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useDialogFocus } from '../lib/dialog';
 
 interface Props {
   saving: boolean;
@@ -14,15 +15,19 @@ const STEPS = [
 
 export function OnboardingDialog({ saving, onComplete }: Props) {
   const { t } = useTranslation();
+  const dialogRef = useDialogFocus<HTMLElement>();
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-4">
       <section
+        ref={dialogRef}
         className="card max-h-[92vh] w-full max-w-2xl overflow-y-auto p-6 sm:p-8"
         role="dialog"
         aria-modal="true"
+        aria-busy={saving}
         aria-labelledby="onboarding-title"
         aria-describedby="onboarding-intro"
+        tabIndex={-1}
       >
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-accent-500/15 text-accent-300">
           <ShieldCheck size={25} aria-hidden="true" />
