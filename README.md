@@ -64,6 +64,7 @@ Output: `src-tauri/target/release/bundle/`
 
 - [`docs/SPEC.md`](docs/SPEC.md) — Full behavioral specification
 - [`docs/ROADMAP_1_0.md`](docs/ROADMAP_1_0.md) — Linux release gates through 1.0
+- [`docs/HANDOFF_2026-08-08.md`](docs/HANDOFF_2026-08-08.md) — Exact continuation checklist and release blockers
 - [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — How to contribute
 
 ## Roadmap
