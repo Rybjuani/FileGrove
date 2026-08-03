@@ -29,12 +29,19 @@ export function Dashboard({ onNavigateToRules, onNavigateToHistory: _ }: Props) 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-primary-50">{t('dashboard.title')}</h1>
           <p className="mt-1 text-sm text-primary-400">{t('dashboard.subtitle')}</p>
+          {folders.length > 0 && (
+            <p className="mt-2 text-xs text-primary-500">
+              {t('dashboard.foldersTracked', { count: folders.length })}
+              <span aria-hidden="true"> · </span>
+              {t('dashboard.rulesActive', { enabled: enabledRules, total: rules.length })}
+            </p>
+          )}
         </div>
-        <button className="btn-primary" onClick={() => void addFolder()}>
+        <button className="btn-primary self-start" onClick={() => void addFolder()}>
           <Plus size={16} />
           {t('dashboard.addFolder')}
         </button>
@@ -71,19 +78,13 @@ export function Dashboard({ onNavigateToRules, onNavigateToHistory: _ }: Props) 
               {t('dashboard.noMatches', { query })}
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 lg:grid-cols-2">
               {filtered.map((folder) => (
                 <FolderCard key={folder.id} folder={folder} onNavigateToRules={onNavigateToRules} />
               ))}
             </div>
           )}
         </>
-      )}
-
-      {rules.length > 0 && (
-        <p className="text-xs text-primary-500">
-          {t('dashboard.rulesActive', { enabled: enabledRules, total: rules.length })}
-        </p>
       )}
     </div>
   );

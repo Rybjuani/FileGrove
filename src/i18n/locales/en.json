@@ -46,6 +46,8 @@
   "dashboard": {
     "addFirstFolder": "Add your first folder",
     "addFolder": "Add folder",
+    "foldersTracked_one": "{{count}} organized folder",
+    "foldersTracked_other": "{{count}} organized folders",
     "noFolders": "No folders added yet",
     "noFoldersDesc": "Add a folder to start organizing your files. Each folder can have its own rules and run in manual or automatic mode.",
     "noMatches": "No folders match \"{{query}}\".",
@@ -150,6 +152,7 @@
       "resume": "Resume",
       "undo": "Undo",
       "undoLatest": "Undo latest",
+      "undoPanelTitle": "Changes you can undo",
       "undoing": "Undoing…",
       "undoHistory": "{{batches}} batches available · {{count}} files in the latest. Repeat Undo to go further back.",
       "undoAvailable": "Files available to undo: {{count}}",
@@ -179,7 +182,12 @@
     },
     "mode": {
       "auto": "Automatic",
+      "label": "Organization mode",
       "single": "Manual"
+    },
+    "progress": {
+      "count": "{{processed}} of {{total}} files",
+      "label": "Organizing files"
     },
     "recommended": {
       "active": "{{count}} active categories",

@@ -38,7 +38,7 @@ Exit gate: repeatable integration suite without personal files or UI clicking.
 - [x] Visual grouped preview instead of a technical path table
 - [x] Simplified custom-rule builder with friendly defaults
 - [x] First-run explanation focused on safety and Automatic mode
-- [ ] Compact dashboard hierarchy and clearer progress/Undo feedback
+- [x] Compact dashboard hierarchy and clearer progress/Undo feedback
 - [ ] Accessibility pass for keyboard, focus, contrast, and screen readers
 
 Exit gate: a new user can organize a disposable folder without documentation.

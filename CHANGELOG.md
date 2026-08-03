@@ -47,6 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   safe defaults, and progressively disclosed advanced actions
 - Persistent first-run welcome that explains the safe Manual-to-Automatic
   workflow, recommended categories, Preview, pause, and historical Undo
+- Calmer dashboard hierarchy with wider folder cards, explicit primary and
+  management actions, accessible progress feedback, and a dedicated Undo panel
 
 ### Local-testing status
 

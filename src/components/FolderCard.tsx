@@ -27,6 +27,7 @@ import type {
 } from '../ipc/types';
 import { FolderAdvancedSettings } from './FolderAdvancedSettings';
 import { readableIpcError } from '../lib/errors';
+import { progressPercent } from '../lib/progress';
 
 interface Props {
   folder: Folder;
@@ -335,12 +336,17 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
         timeStyle: 'short',
       }).format(new Date(undoSession.at))
     : null;
+  const cardTitleId = `folder-${folder.id}-title`;
+  const undoTitleId = `folder-${folder.id}-undo-title`;
+  const progressValue = progress ? progressPercent(progress.processed, progress.total) : 0;
 
   return (
-    <div className="card space-y-4">
+    <article className="card space-y-4" aria-labelledby={cardTitleId}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-base font-medium text-primary-100">{folder.name}</h3>
+          <h2 id={cardTitleId} className="truncate text-base font-semibold text-primary-100">
+            {folder.name}
+          </h2>
           <p className="mt-1 truncate text-xs text-primary-500" title={folder.path}>
             {folder.path}
           </p>
@@ -348,12 +354,18 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
         <span className={`badge shrink-0 ${statusClass}`}>{statusLabel}</span>
       </div>
 
-      <div className="grid grid-cols-2 gap-1 rounded-md border border-primary-800 bg-primary-950 p-1 text-xs">
+      <div
+        className="grid grid-cols-2 gap-1 rounded-md border border-primary-800 bg-primary-950 p-1 text-xs"
+        role="group"
+        aria-label={t('folderCard.mode.label')}
+      >
         {(['auto', 'single'] as const).map((mode) => (
           <button
+            type="button"
             key={mode}
             onClick={() => void handleModeChange(mode)}
             disabled={modeChanging || busy || undoBusy}
+            aria-pressed={folder.mode === mode}
             className={`rounded px-2 py-1.5 transition-colors ${
               folder.mode === mode
                 ? 'bg-accent-600 text-white'
@@ -391,7 +403,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
 
       <FolderAdvancedSettings folder={folder} />
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-primary-800 pt-3">
+      <div className="grid grid-cols-2 gap-2 border-t border-primary-800 pt-3">
         <button
           className="btn-secondary"
           onClick={() => void handlePreview()}
@@ -402,7 +414,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
           {t('folderCard.actions.preview')}
         </button>
         <button
-          className="btn-primary flex-1"
+          className="btn-primary"
           onClick={() => void handleOrganize()}
           disabled={undoBusy || (busy && !activeSessionId) || modeChanging}
         >
@@ -413,73 +425,119 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
         </button>
         {folder.mode === 'auto' && (
           <button
-            className="btn-secondary"
+            className="btn-secondary col-span-2"
             onClick={() => void handleWatcherToggle()}
             disabled={busy || undoBusy || modeChanging}
-            title={t(
+          >
+            {folder.watcherStatus === 'running' ? <Pause size={14} /> : <Play size={14} />}
+            {t(
               folder.watcherStatus === 'running'
                 ? 'folderCard.actions.pause'
                 : folder.watcherStatus === 'paused'
                   ? 'folderCard.actions.resume'
                   : 'folderCard.actions.watch',
             )}
-          >
-            {folder.watcherStatus === 'running' ? <Pause size={14} /> : <Play size={14} />}
           </button>
         )}
-        {undoSession && (
-          <button
-            className="btn-secondary"
-            onClick={() => void handleUndo()}
-            disabled={undoBusy || busy}
-          >
-            <RotateCcw size={14} />
-            {t(undoBusy ? 'folderCard.actions.undoing' : 'folderCard.actions.undoLatest')}
-          </button>
-        )}
-        {undoSession && (
-          <button
-            className="btn-ghost p-2"
-            onClick={() => void handleDismissUndo()}
-            disabled={undoBusy || busy}
-            title={t('folderCard.actions.dismissUndo')}
-          >
-            <X size={14} />
-          </button>
-        )}
-        <button
-          className="btn-ghost"
-          onClick={() => void handleRename()}
-          title={t('folderCard.rename')}
-          disabled={busy || undoBusy || modeChanging}
-        >
-          <Pencil size={14} />
-        </button>
-        <button
-          className="btn-ghost"
-          onClick={() => void handleRemove()}
-          title={t('folderCard.actions.remove')}
-          disabled={busy || undoBusy || modeChanging}
-        >
-          <Trash2 size={14} />
-        </button>
       </div>
 
       {busy && progress && (
-        <p className="text-xs text-primary-400">
-          {progress.processed} / {progress.total}
+        <div className="space-y-2" role="status" aria-live="polite">
+          <div className="flex items-center justify-between gap-3 text-xs text-primary-300">
+            <span>{t('folderCard.progress.label')}</span>
+            <span>
+              {t('folderCard.progress.count', {
+                processed: progress.processed,
+                total: progress.total,
+              })}
+            </span>
+          </div>
+          <div
+            className="h-2 overflow-hidden rounded-full bg-primary-800"
+            role="progressbar"
+            aria-label={t('folderCard.progress.label')}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progressValue}
+          >
+            <div
+              className="h-full rounded-full bg-accent-500 transition-[width]"
+              style={{ width: `${progressValue}%` }}
+            />
+          </div>
+        </div>
+      )}
+      {lastResult && (
+        <p
+          className="rounded-md bg-primary-800/60 p-3 text-xs text-primary-200"
+          role="status"
+          aria-live="polite"
+        >
+          {lastResult}
         </p>
       )}
-      {lastResult && <p className="text-xs text-primary-300">{lastResult}</p>}
       {undoSession && (
-        <p className="text-xs text-primary-500">
-          {t('folderCard.actions.undoHistory', {
-            batches: undoSessionCount,
-            count: undoSession.entryCount,
-          })}
-          {formattedUndoAt ? ` · ${formattedUndoAt}` : ''}
-        </p>
+        <section
+          className="rounded-lg border border-accent-500/25 bg-accent-500/5 p-3"
+          aria-labelledby={undoTitleId}
+        >
+          <div className="flex items-start gap-3">
+            <span className="rounded-md bg-accent-500/10 p-2 text-accent-300">
+              <RotateCcw size={16} aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h3 id={undoTitleId} className="text-sm font-medium text-primary-100">
+                {t('folderCard.actions.undoPanelTitle')}
+              </h3>
+              <p className="mt-1 text-xs leading-relaxed text-primary-400">
+                {t('folderCard.actions.undoHistory', {
+                  batches: undoSessionCount,
+                  count: undoSession.entryCount,
+                })}
+                {formattedUndoAt ? ` · ${formattedUndoAt}` : ''}
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              className="btn-secondary flex-1"
+              onClick={() => void handleUndo()}
+              disabled={undoBusy || busy}
+            >
+              <RotateCcw size={14} />
+              {t(undoBusy ? 'folderCard.actions.undoing' : 'folderCard.actions.undoLatest')}
+            </button>
+            <button
+              className="btn-ghost p-2"
+              onClick={() => void handleDismissUndo()}
+              disabled={undoBusy || busy}
+              aria-label={t('folderCard.actions.dismissUndo')}
+              title={t('folderCard.actions.dismissUndo')}
+            >
+              <X size={15} aria-hidden="true" />
+            </button>
+          </div>
+        </section>
       )}
+
+      <div className="flex justify-end gap-1 border-t border-primary-800 pt-2">
+        <button
+          className="btn-ghost px-2 py-1.5 text-xs"
+          onClick={() => void handleRename()}
+          disabled={busy || undoBusy || modeChanging}
+        >
+          <Pencil size={13} />
+          {t('folderCard.rename')}
+        </button>
+        <button
+          className="btn-ghost px-2 py-1.5 text-xs text-red-300 hover:text-red-200"
+          onClick={() => void handleRemove()}
+          disabled={busy || undoBusy || modeChanging}
+        >
+          <Trash2 size={13} />
+          {t('folderCard.actions.remove')}
+        </button>
+      </div>
 
       {previewOpen && (
         <PreviewDialog
@@ -489,7 +547,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
           onClose={() => setPreviewOpen(false)}
         />
       )}
-    </div>
+    </article>
   );
 }
 

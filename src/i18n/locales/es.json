@@ -46,6 +46,8 @@
   "dashboard": {
     "addFirstFolder": "Añade tu primera carpeta",
     "addFolder": "Añadir carpeta",
+    "foldersTracked_one": "{{count}} carpeta organizada",
+    "foldersTracked_other": "{{count}} carpetas organizadas",
     "noFolders": "Aún no se han añadido carpetas",
     "noFoldersDesc": "Añade una carpeta para empezar a organizar tus archivos. Cada carpeta puede tener sus propias reglas y funcionar en modo manual o automático.",
     "noMatches": "Ninguna carpeta coincide con «{{query}}».",
@@ -150,6 +152,7 @@
       "resume": "Reanudar",
       "undo": "Deshacer",
       "undoLatest": "Deshacer último",
+      "undoPanelTitle": "Cambios que puedes deshacer",
       "undoing": "Deshaciendo…",
       "undoHistory": "{{batches}} lotes disponibles · {{count}} archivos en el más reciente. Puedes repetir Deshacer para volver más atrás.",
       "undoAvailable": "Archivos disponibles para deshacer: {{count}}",
@@ -179,7 +182,12 @@
     },
     "mode": {
       "auto": "Automático",
+      "label": "Modo de organización",
       "single": "Manual"
+    },
+    "progress": {
+      "count": "{{processed}} de {{total}} archivos",
+      "label": "Organizando archivos"
     },
     "recommended": {
       "active": "{{count}} categorías activas",
