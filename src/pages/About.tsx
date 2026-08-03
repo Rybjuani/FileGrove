@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Trees, HardDrive, Heart } from 'lucide-react';
+import { HardDrive, Heart } from 'lucide-react';
+import { BrandMark } from '../components/BrandMark';
 import { ipc } from '../ipc';
 
 export function About() {
@@ -19,7 +20,7 @@ export function About() {
 
       <div className="card flex items-center gap-4">
         <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-accent-600/20">
-          <Trees size={32} className="text-accent-400" aria-hidden="true" />
+          <BrandMark size={32} className="text-accent-400" />
         </div>
         <div>
           <h2 className="text-xl font-semibold text-primary-50">FileGrove</h2>

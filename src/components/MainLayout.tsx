@@ -1,6 +1,7 @@
 import type { Page } from '../App';
 import { useTranslation } from 'react-i18next';
-import { LayoutGrid, ListTree, History, Settings, Info, Trees } from 'lucide-react';
+import { LayoutGrid, ListTree, History, Settings, Info } from 'lucide-react';
+import { BrandMark } from './BrandMark';
 
 interface Props {
   currentPage: Page;
@@ -30,7 +31,7 @@ export function MainLayout({ currentPage, onNavigate, children }: Props) {
       {/* Sidebar */}
       <aside className="flex w-56 flex-col border-r border-primary-800 bg-primary-900">
         <div className="flex items-center gap-2 px-5 py-5">
-          <Trees size={22} className="text-accent-500" aria-hidden="true" />
+          <BrandMark size={22} className="text-accent-500" />
           <span className="text-lg font-semibold">FileGrove</span>
         </div>
         <nav className="flex-1 space-y-1 px-3" aria-label={t('sidebar.navigation')}>
