@@ -61,6 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Low-risk visual polish: 10/12/16 px shared surfaces, 44 px tactile controls,
   softer borders and shadows, coherent inputs and switches, and a wider
   single-column dashboard until the `xl` breakpoint
+- Simplified Activity history into a compact file/action/result summary with
+  technical paths and command details shown only on demand
 
 ### Local-testing status
 
