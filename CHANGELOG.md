@@ -58,6 +58,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   security, privacy, package metadata, compatibility evidence, and contributor workflow
 - Canonical FileGrove tree mark shared by the interface and generated Linux,
   Windows, macOS, Android, and iOS icon assets
+- Low-risk visual polish: 10/12/16 px shared surfaces, 44 px tactile controls,
+  softer borders and shadows, coherent inputs and switches, and a wider
+  single-column dashboard until the `xl` breakpoint
 
 ### Local-testing status
 
