@@ -25,6 +25,11 @@ logs/
 coverage/
 .turbo/
 .next/
+filegrove_tests/
+
+# Local recovery bundles
+file_arbor_reconstructed.zip
+filegrove_scaffold.zip
 
 # Local env
 .env
