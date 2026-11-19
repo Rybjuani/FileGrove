@@ -227,4 +227,42 @@ mod tests {
         assert_eq!(report.groups[0].original.name, "file1.txt");
         assert_eq!(report.groups[0].duplicates[0].name, "file2.txt");
     }
+
+    #[test]
+    fn counts_all_copies_and_wasted_bytes() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("watched");
+        fs::create_dir(&root).unwrap();
+        fs::write(root.join("a.txt"), b"same").unwrap();
+        fs::write(root.join("b.txt"), b"same").unwrap();
+        fs::write(root.join("c.txt"), b"same").unwrap();
+
+        let report = scan_for_duplicates(&root, &[], &[]).unwrap();
+        assert_eq!(report.groups.len(), 1);
+        assert_eq!(report.total_duplicates, 2);
+        assert_eq!(report.total_wasted_bytes, 8);
+    }
+
+    #[test]
+    fn skips_files_inside_nested_repositories() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("watched");
+        let repo = root.join("project");
+        fs::create_dir_all(repo.join(".git")).unwrap();
+        fs::write(root.join("keep.txt"), b"same").unwrap();
+        fs::write(repo.join("ignored.txt"), b"same").unwrap();
+
+        let report = scan_for_duplicates(&root, &[], &[]).unwrap();
+        assert_eq!(report.groups.len(), 0);
+    }
+
+    #[test]
+    fn rejects_a_repository_as_scan_root() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("repo");
+        fs::create_dir_all(root.join(".git")).unwrap();
+        fs::write(root.join("a.txt"), b"same").unwrap();
+
+        assert!(scan_for_duplicates(&root, &[], &[]).is_err());
+    }
 }
