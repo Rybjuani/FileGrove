@@ -174,3 +174,32 @@ export interface OrganizeDone extends OrganizeStarted {
   stats: { done: number; failed: number; total: number };
   error?: string;
 }
+
+// ─── Deduplication ───────────────────────────────────────────────────────────
+
+export interface DuplicateFile {
+  path: string;
+  name: string;
+  size: number;
+  modifiedAt: string;
+  isOriginal: boolean;
+}
+
+export interface DuplicateGroup {
+  hash: string;
+  size: number;
+  original: DuplicateFile;
+  duplicates: DuplicateFile[];
+}
+
+export interface DuplicateReport {
+  groups: DuplicateGroup[];
+  totalDuplicates: number;
+  totalWastedBytes: number;
+}
+
+export interface TrashResult {
+  trashed: number;
+  failed: number;
+  errors: string[];
+}

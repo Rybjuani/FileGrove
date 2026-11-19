@@ -1,3 +1,4 @@
+#[cfg(target_os = "linux")]
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -12,6 +13,7 @@ use tempfile::TempDir;
 use uuid::Uuid;
 
 struct PolicyFixture {
+    #[allow(dead_code)]
     temporary: TempDir,
     watched: PathBuf,
     destination: PathBuf,
@@ -87,6 +89,7 @@ impl PolicyFixture {
         self.destination.join("report (1).txt")
     }
 
+    #[cfg(target_os = "linux")]
     fn isolated_data_home(&self) -> PathBuf {
         self.temporary.path().join("xdg-data")
     }
@@ -124,11 +127,13 @@ impl PolicyFixture {
     }
 }
 
+#[cfg(target_os = "linux")]
 struct EnvironmentGuard {
     key: &'static str,
     previous: Option<OsString>,
 }
 
+#[cfg(target_os = "linux")]
 impl EnvironmentGuard {
     fn set_path(key: &'static str, value: &Path) -> Self {
         let previous = std::env::var_os(key);
@@ -137,6 +142,7 @@ impl EnvironmentGuard {
     }
 }
 
+#[cfg(target_os = "linux")]
 impl Drop for EnvironmentGuard {
     fn drop(&mut self) {
         if let Some(previous) = self.previous.as_ref() {
@@ -225,8 +231,11 @@ async fn every_conflict_and_duplicate_policy_preserves_its_safety_contract() {
     assert_eq!(delete.only_activity_type(), ActivityType::Delete);
 
     let trash = PolicyFixture::new(b"identical", b"identical");
+    #[cfg(target_os = "linux")]
     let data_home = trash.isolated_data_home();
+    #[cfg(target_os = "linux")]
     fs::create_dir_all(&data_home).unwrap();
+    #[cfg(target_os = "linux")]
     let environment = EnvironmentGuard::set_path("XDG_DATA_HOME", &data_home);
     let (session_id, result) = trash
         .execute(ConflictBehavior::Rename, DuplicateBehavior::Trash)
@@ -236,6 +245,9 @@ async fn every_conflict_and_duplicate_policy_preserves_its_safety_contract() {
     assert_contents(trash.requested_destination(), b"identical");
     assert_eq!(trash.db.undo().stats(session_id).unwrap().entry_count, 0);
     assert_eq!(trash.only_activity_type(), ActivityType::Trash);
-    assert_contents(data_home.join("Trash/files/report.txt"), b"identical");
-    drop(environment);
+    #[cfg(target_os = "linux")]
+    {
+        assert_contents(data_home.join("Trash/files/report.txt"), b"identical");
+        drop(environment);
+    }
 }

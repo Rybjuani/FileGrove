@@ -6,6 +6,7 @@
 pub mod activity;
 pub mod app;
 pub mod commands;
+pub mod dedup;
 pub mod files;
 pub mod folders;
 pub mod organize;

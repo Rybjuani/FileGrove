@@ -136,10 +136,29 @@ impl PathFilter {
             require_literal_separator: false,
             require_literal_leading_dot: false,
         };
-        self.patterns.iter().any(|pattern| {
+        if self.patterns.iter().any(|pattern| {
             pattern.matches_with(&normalized, options) || pattern.matches_with(file_name, options)
-        })
+        }) {
+            return true;
+        }
+
+        // Never touch or traverse files inside a Git, Mercurial or SVN repository
+        is_inside_repository(&self.root, path)
     }
+}
+
+fn is_inside_repository(root: &Path, path: &Path) -> bool {
+    let mut current = path.parent();
+    while let Some(dir) = current {
+        if dir == root {
+            break;
+        }
+        if dir.join(".git").exists() || dir.join(".hg").exists() || dir.join(".svn").exists() {
+            return true;
+        }
+        current = dir.parent();
+    }
+    false
 }
 
 /// Backwards-compatible built-in filtering for callers without folder config.

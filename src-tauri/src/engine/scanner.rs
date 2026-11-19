@@ -39,21 +39,36 @@ impl ScanOptions {
         }
     }
 
-    pub fn exclude_managed_destinations(&mut self, rules: &[Rule]) {
+    pub fn exclude_managed_destinations(&mut self, scan_root: &Path, rules: &[Rule]) {
         for rule in rules {
             let Action::Move { destination } = &rule.action else {
                 continue;
             };
-            let Ok(Some(root)) = crate::paths::safety::relative_destination_root(destination)
-            else {
+            if let Ok(Some(root)) = crate::paths::safety::relative_destination_root(destination) {
+                if !self
+                    .exclude_folders
+                    .iter()
+                    .any(|existing| existing.eq_ignore_ascii_case(&root))
+                {
+                    self.exclude_folders.push(root);
+                }
                 continue;
-            };
-            if !self
-                .exclude_folders
-                .iter()
-                .any(|existing| existing.eq_ignore_ascii_case(&root))
-            {
-                self.exclude_folders.push(root);
+            }
+            let dest_path = Path::new(destination);
+            if dest_path.is_absolute() {
+                if let Ok(relative) = dest_path.strip_prefix(scan_root) {
+                    if let Some(std::path::Component::Normal(comp)) = relative.components().next() {
+                        if let Some(comp_str) = comp.to_str() {
+                            if !self
+                                .exclude_folders
+                                .iter()
+                                .any(|existing| existing.eq_ignore_ascii_case(comp_str))
+                            {
+                                self.exclude_folders.push(comp_str.to_string());
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -97,7 +112,22 @@ pub fn scan(
         .follow_links(false)
         .max_depth(max_depth)
         .into_iter()
-        .filter_entry(|entry| entry.depth() == 0 || !filter.is_ignored(entry.path()));
+        .filter_entry(|entry| {
+            if entry.depth() == 0 {
+                return true;
+            }
+            if filter.is_ignored(entry.path()) {
+                return false;
+            }
+            if entry.file_type().is_dir()
+                && (entry.path().join(".git").exists()
+                    || entry.path().join(".hg").exists()
+                    || entry.path().join(".svn").exists())
+            {
+                return false;
+            }
+            true
+        });
 
     let mut files = Vec::new();
     let mut stats = ScanStats::default();
@@ -180,19 +210,22 @@ mod tests {
             exclude_folders: Vec::new(),
             exclude_patterns: Vec::new(),
         };
-        options.exclude_managed_destinations(&[Rule {
-            id: uuid::Uuid::new_v4(),
-            name: "Images".into(),
-            is_quick_rule: true,
-            enabled: true,
-            order: 0,
-            icon: "Image".into(),
-            conditions: Vec::new(),
-            action: Action::Move {
-                destination: "Images/{year}".into(),
-            },
-            created_at: chrono::Utc::now(),
-        }]);
+        options.exclude_managed_destinations(
+            &root,
+            &[Rule {
+                id: uuid::Uuid::new_v4(),
+                name: "Images".into(),
+                is_quick_rule: true,
+                enabled: true,
+                order: 0,
+                icon: "Image".into(),
+                conditions: Vec::new(),
+                action: Action::Move {
+                    destination: "Images/{year}".into(),
+                },
+                created_at: chrono::Utc::now(),
+            }],
+        );
 
         let output = scan(&root, &options, || false, |_| {}).unwrap();
 

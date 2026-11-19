@@ -6,7 +6,7 @@ use std::path::{Component, Path, PathBuf};
 use anyhow::{anyhow, Context, Result};
 
 pub fn canonical_path_key(path: &Path) -> String {
-    let resolved = std::fs::canonicalize(path).unwrap_or_else(|_| lexical_absolute(path));
+    let resolved = dunce::canonicalize(path).unwrap_or_else(|_| lexical_absolute(path));
     let key = resolved.to_string_lossy().into_owned();
     #[cfg(windows)]
     {
@@ -29,13 +29,19 @@ pub fn validate_scan_root(path: &Path) -> Result<PathBuf> {
         return Err(anyhow!("WATCHED_FOLDER_INVALID"));
     }
     reject_parent_components(path, "WATCHED_FOLDER_INVALID")?;
-    let canonical = std::fs::canonicalize(path).map_err(|_| anyhow!("WATCHED_FOLDER_INVALID"))?;
+    let canonical = dunce::canonicalize(path).map_err(|_| anyhow!("WATCHED_FOLDER_INVALID"))?;
     let metadata = std::fs::metadata(&canonical).map_err(|_| anyhow!("WATCHED_FOLDER_INVALID"))?;
     if !metadata.is_dir() {
         return Err(anyhow!("WATCHED_FOLDER_INVALID"));
     }
     if is_protected_root(&canonical) {
         return Err(anyhow!("WATCHED_FOLDER_PROTECTED"));
+    }
+    if canonical.join(".git").exists()
+        || canonical.join(".hg").exists()
+        || canonical.join(".svn").exists()
+    {
+        return Err(anyhow!("WATCHED_FOLDER_IS_REPOSITORY"));
     }
     Ok(canonical)
 }
@@ -51,7 +57,7 @@ pub fn validate_source_file(scan_root: &Path, source: &Path) -> Result<PathBuf> 
     if link_metadata.file_type().is_symlink() || !link_metadata.is_file() {
         return Err(anyhow!("SOURCE_FILE_INVALID"));
     }
-    let canonical = std::fs::canonicalize(source).map_err(|_| anyhow!("SOURCE_FILE_INVALID"))?;
+    let canonical = dunce::canonicalize(source).map_err(|_| anyhow!("SOURCE_FILE_INVALID"))?;
     if canonical == root || !component_starts_with(&canonical, &root) {
         return Err(anyhow!("SOURCE_FILE_OUTSIDE_WATCHED_FOLDER"));
     }
@@ -101,7 +107,7 @@ pub fn relative_destination_root(template: &str) -> Result<Option<String>> {
         return Err(anyhow!("INVALID_DESTINATION"));
     }
     let path = Path::new(template);
-    if path.is_absolute() {
+    if path.is_absolute() || path.has_root() {
         reject_parent_components(path, "INVALID_DESTINATION_TRAVERSAL")?;
         return Ok(None);
     }
@@ -180,7 +186,7 @@ fn reject_symlinks_below_root(root: &Path, destination: &Path) -> Result<()> {
 
 fn canonical_or_resolved(path: &Path) -> Result<PathBuf> {
     if path.exists() {
-        return std::fs::canonicalize(path).with_context(|| format!("canonicalizing {path:?}"));
+        return dunce::canonicalize(path).with_context(|| format!("canonicalizing {path:?}"));
     }
     let mut missing = Vec::<OsString>::new();
     let mut ancestor = path;
@@ -193,7 +199,7 @@ fn canonical_or_resolved(path: &Path) -> Result<PathBuf> {
             .parent()
             .ok_or_else(|| anyhow!("path has no existing ancestor"))?;
     }
-    let mut resolved = std::fs::canonicalize(ancestor)?;
+    let mut resolved = dunce::canonicalize(ancestor)?;
     for component in missing.into_iter().rev() {
         resolved.push(component);
     }

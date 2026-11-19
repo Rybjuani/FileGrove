@@ -20,6 +20,8 @@ import type {
   CommandTestResult,
   PreviewResult,
   UndoSessionSummary,
+  DuplicateReport,
+  TrashResult,
 } from './types';
 
 export const ipc = {
@@ -145,6 +147,21 @@ export const ipc = {
       invoke<IpcResponse<{ hasAccess: boolean; message: string }>>('check_access', { folderPath }),
     openSettings: () => invoke<IpcResponse>('open_settings'),
     isMacOS: () => invoke<IpcResponse<boolean>>('is_macos'),
+  },
+
+  dedup: {
+    findDuplicates: (
+      folderPath: string,
+      excludeFolders: string[] = [],
+      excludePatterns: string[] = [],
+    ) =>
+      invoke<IpcResponse<DuplicateReport>>('find_duplicates', {
+        folderPath,
+        excludeFolders,
+        excludePatterns,
+      }),
+    trashDuplicates: (paths: string[]) =>
+      invoke<IpcResponse<TrashResult>>('trash_duplicates', { paths }),
   },
 
   app: {

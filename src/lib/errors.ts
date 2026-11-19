@@ -78,6 +78,7 @@ const ERROR_KEYS: Record<string, string> = {
   USER_CANCELED_FILE_SELECT: 'errors.userCanceledFileSelect',
   USER_CANCELED_FOLDER_SELECT: 'errors.userCanceledFolderSelect',
   WATCHED_FOLDER_INVALID: 'errors.watchedFolderInvalid',
+  WATCHED_FOLDER_IS_REPOSITORY: 'errors.watchedFolderIsRepository',
   WATCHED_FOLDER_OVERLAP: 'errors.watchedFolderOverlap',
   WATCHED_FOLDER_PROTECTED: 'errors.watchedFolderProtected',
   WATCHER_NOT_RUNNING: 'errors.watcherNotRunning',

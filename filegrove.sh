@@ -2,11 +2,9 @@
 set -euo pipefail
 repo_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
-if [[ -x "$repo_dir/src-tauri/target/release/filegrove" ]]; then
+# Only release binaries bundle the frontend and can run standalone without Vite.
+if [[ -x "$repo_dir/src-tauri/target/release/filegrove" ]] && [[ "${1:-}" != "--dev" ]]; then
   exec "$repo_dir/src-tauri/target/release/filegrove" "$@"
-fi
-if [[ -x "$repo_dir/src-tauri/target/debug/filegrove" ]]; then
-  exec "$repo_dir/src-tauri/target/debug/filegrove" "$@"
 fi
 
 cd "$repo_dir"

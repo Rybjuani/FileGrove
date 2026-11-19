@@ -74,7 +74,7 @@ async fn configured_scan<R: Runtime>(
             .rules()
             .get_by_ids(&folder.rule_ids)
             .map_err(|error| error.to_string())?;
-        options.exclude_managed_destinations(&rules);
+        options.exclude_managed_destinations(Path::new(folder_path), &rules);
     }
     let root = PathBuf::from(folder_path);
     let cancellation = cancellation.cloned();
@@ -425,15 +425,30 @@ async fn organize_paths_inner_with_gate<R: Runtime>(
         let crate::domain::Action::Move { destination } = &rule.action else {
             continue;
         };
-        let Ok(Some(managed_root)) = crate::paths::safety::relative_destination_root(destination)
-        else {
-            continue;
-        };
-        if !exclude_folders
-            .iter()
-            .any(|existing| existing.eq_ignore_ascii_case(&managed_root))
+        if let Ok(Some(managed_root)) = crate::paths::safety::relative_destination_root(destination)
         {
-            exclude_folders.push(managed_root);
+            if !exclude_folders
+                .iter()
+                .any(|existing| existing.eq_ignore_ascii_case(&managed_root))
+            {
+                exclude_folders.push(managed_root);
+            }
+            continue;
+        }
+        let dest_path = Path::new(destination);
+        if dest_path.is_absolute() {
+            if let Ok(relative) = dest_path.strip_prefix(&root) {
+                if let Some(std::path::Component::Normal(comp)) = relative.components().next() {
+                    if let Some(comp_str) = comp.to_str() {
+                        if !exclude_folders
+                            .iter()
+                            .any(|existing| existing.eq_ignore_ascii_case(comp_str))
+                        {
+                            exclude_folders.push(comp_str.to_string());
+                        }
+                    }
+                }
+            }
         }
     }
     let filter = match crate::watcher::filters::PathFilter::new(

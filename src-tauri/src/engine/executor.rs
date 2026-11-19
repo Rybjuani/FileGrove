@@ -256,8 +256,8 @@ impl<'a> Organizer<'a> {
             return action_error("SOURCE_FILE_INVALID".into());
         };
         let requested_path = destination_directory.join(file_name);
-        if requested_path == source {
-            return action_error("SOURCE_EQUALS_DESTINATION".into());
+        if requested_path == source || source.parent() == Some(&destination_directory) {
+            return action_skipped();
         }
 
         // Two watched folders can target the same destination concurrently.

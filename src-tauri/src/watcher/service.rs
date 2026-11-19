@@ -105,15 +105,29 @@ impl WatcherService {
             let Action::Move { destination } = rule.action else {
                 continue;
             };
-            let Ok(Some(root)) = crate::paths::safety::relative_destination_root(&destination)
-            else {
+            if let Ok(Some(root)) = crate::paths::safety::relative_destination_root(&destination) {
+                if !exclude_folders
+                    .iter()
+                    .any(|existing| existing.eq_ignore_ascii_case(&root))
+                {
+                    exclude_folders.push(root);
+                }
                 continue;
-            };
-            if !exclude_folders
-                .iter()
-                .any(|existing| existing.eq_ignore_ascii_case(&root))
-            {
-                exclude_folders.push(root);
+            }
+            let dest_path = std::path::Path::new(&destination);
+            if dest_path.is_absolute() {
+                if let Ok(relative) = dest_path.strip_prefix(&watched_path) {
+                    if let Some(std::path::Component::Normal(comp)) = relative.components().next() {
+                        if let Some(comp_str) = comp.to_str() {
+                            if !exclude_folders
+                                .iter()
+                                .any(|existing| existing.eq_ignore_ascii_case(comp_str))
+                            {
+                                exclude_folders.push(comp_str.to_string());
+                            }
+                        }
+                    }
+                }
             }
         }
         let path_filter =

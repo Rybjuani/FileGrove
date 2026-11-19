@@ -4,6 +4,7 @@
 
 pub mod cancellation;
 pub mod command;
+pub mod dedup;
 pub mod executor;
 pub mod file_ops;
 pub mod keyed_lock;

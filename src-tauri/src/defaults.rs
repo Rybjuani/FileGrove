@@ -79,7 +79,7 @@ pub fn ensure_personal_profile(db: &Database) -> Result<()> {
     destinations.insert("Video".to_string(), videos.to_string_lossy().into_owned());
 
     ensure_folder(db, &desktop, "Desktop", false, &destinations)?;
-    ensure_folder(db, &downloads, "Downloads", true, &destinations)?;
+    ensure_folder(db, &downloads, "Downloads", false, &destinations)?;
 
     db.settings().set(PROFILE_KEY, &Value::Bool(true))?;
     // Startup is reconciled by the existing Tauri autostart plugin during

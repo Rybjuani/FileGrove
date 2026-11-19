@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AlertTriangle,
+  Copy,
   Eye,
   Files,
   Folder as FolderIcon,
@@ -26,6 +27,7 @@ import type {
   UndoSessionSummary,
 } from '../ipc/types';
 import { FolderAdvancedSettings } from './FolderAdvancedSettings';
+import { DedupModal } from './DedupModal';
 import { readableIpcError } from '../lib/errors';
 import { progressPercent } from '../lib/progress';
 import { useDialogFocus } from '../lib/dialog';
@@ -51,6 +53,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewResult, setPreviewResult] = useState<PreviewResult | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [dedupOpen, setDedupOpen] = useState(false);
   const [modeChanging, setModeChanging] = useState(false);
   const [installingRecommendations, setInstallingRecommendations] = useState(false);
   const busyRef = useRef(false);
@@ -531,6 +534,15 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
           {t('folderCard.rename')}
         </button>
         <button
+          className="btn-ghost px-2 py-1.5 text-xs text-emerald-400 hover:text-emerald-300"
+          onClick={() => setDedupOpen(true)}
+          disabled={busy || undoBusy || modeChanging}
+          title={t('dedup.button')}
+        >
+          <Copy size={13} />
+          {t('dedup.button')}
+        </button>
+        <button
           className="btn-ghost px-2 py-1.5 text-xs text-red-300 hover:text-red-200"
           onClick={() => void handleRemove()}
           disabled={busy || undoBusy || modeChanging}
@@ -546,6 +558,14 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
           loading={previewLoading}
           error={previewError}
           onClose={() => setPreviewOpen(false)}
+        />
+      )}
+      {dedupOpen && (
+        <DedupModal
+          folderPath={folder.path}
+          excludeFolders={folder.excludeFolders}
+          excludePatterns={folder.excludePatterns}
+          onClose={() => setDedupOpen(false)}
         />
       )}
     </article>

@@ -207,6 +207,9 @@ pub fn run() {
             ipc::permissions::check_access,
             ipc::permissions::open_settings,
             ipc::permissions::is_macos,
+            // Deduplication
+            ipc::dedup::find_duplicates,
+            ipc::dedup::trash_duplicates,
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

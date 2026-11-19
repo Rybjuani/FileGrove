@@ -44,6 +44,8 @@ fs_extra = "1"
 kamadak-exif = "0.5"
 trash = "5"
 same-file = "1"
+dunce = "1"
+sha2 = "0.10"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }

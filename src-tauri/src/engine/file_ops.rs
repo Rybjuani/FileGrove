@@ -444,9 +444,9 @@ fn is_cancelled(cancellation: Option<&CancellationToken>) -> bool {
     cancellation.is_some_and(CancellationToken::is_cancelled)
 }
 
-fn sync_parent(path: &Path) {
+fn sync_parent(_path: &Path) {
     #[cfg(unix)]
-    if let Some(parent) = path.parent() {
+    if let Some(parent) = _path.parent() {
         if let Ok(directory) = File::open(parent) {
             let _ = directory.sync_all();
         }
