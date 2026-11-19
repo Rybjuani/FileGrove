@@ -186,7 +186,11 @@ impl WatcherService {
         let task_is_active = is_active.clone();
         let task_pending = pending.clone();
 
-        tokio::spawn(async move {
+        // `start_watching` is called during Tauri setup as well as from IPC.
+        // At setup time there is no Tokio runtime entered on the current
+        // thread, so `tokio::spawn` panics as soon as an Automatic folder is
+        // restored. Use Tauri's application runtime in both call paths.
+        tauri::async_runtime::spawn(async move {
             while rx.recv().await.is_some() {
                 if !task_is_active.load(Ordering::Acquire) {
                     break;

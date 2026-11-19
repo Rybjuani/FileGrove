@@ -123,6 +123,17 @@ impl FolderRepo {
     /// a single transaction. Existing customized quick move rules are reused;
     /// a quick rule changed to a destructive action is never assigned here.
     pub fn apply_recommended_rules(&self, folder_id: Uuid, language: &str) -> Result<Folder> {
+        self.apply_recommended_rules_with_destinations(folder_id, language, None)
+    }
+
+    /// Install the built-in move rules, optionally targeting the user's
+    /// platform libraries instead of folders below the watched root.
+    pub fn apply_recommended_rules_with_destinations(
+        &self,
+        folder_id: Uuid,
+        language: &str,
+        destinations: Option<&std::collections::HashMap<String, String>>,
+    ) -> Result<Folder> {
         let mut conn = self.conn.lock();
         let transaction = conn.transaction()?;
         let serialized_ids: String = transaction.query_row(
@@ -141,11 +152,13 @@ impl FolderRepo {
             let existing = {
                 let mut statement = transaction.prepare(
                     "SELECT id, action FROM rules \
-                     WHERE is_quick_rule = 1 AND icon = ?1 ORDER BY created_at ASC",
+                     WHERE is_quick_rule = 1 AND icon = ?1 AND ?2 = 0 \
+                     ORDER BY created_at ASC",
                 )?;
-                let rows = statement.query_map([template.icon], |row| {
-                    Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
-                })?;
+                let rows = statement.query_map(
+                    rusqlite::params![template.icon, destinations.is_some() as i32],
+                    |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+                )?;
                 let mut existing = None;
                 for row in rows {
                     let (id, serialized_action) = row?;
@@ -176,7 +189,11 @@ impl FolderRepo {
                 )?;
                 rule_id
             } else {
-                let (name, destination) = localized_quick_rule(template.icon, language);
+                let (name, relative_destination) = localized_quick_rule(template.icon, language);
+                let destination = destinations
+                    .and_then(|values| values.get(template.icon))
+                    .map(String::as_str)
+                    .unwrap_or(relative_destination);
                 let rule = Rule {
                     id: Uuid::new_v4(),
                     name: name.to_string(),

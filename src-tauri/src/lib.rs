@@ -4,6 +4,7 @@
 
 #![cfg_attr(test, allow(dead_code, unused_imports))]
 
+mod defaults;
 mod domain;
 mod engine;
 mod exif;
@@ -89,6 +90,7 @@ pub fn run() {
             // Open the database from the user data dir.
             let db = storage::Database::open_default(app.handle())?;
             db.run_migrations()?;
+            defaults::ensure_personal_profile(&db)?;
             db.undo().reconcile()?;
             db.command_ledger().reset_in_progress()?;
             let interrupted_deletes = db.activity().mark_interrupted_deletes_for_review()?;

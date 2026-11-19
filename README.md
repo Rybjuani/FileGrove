@@ -60,6 +60,13 @@ npm run tauri build
 
 Output: `src-tauri/target/release/bundle/`
 
+### Canonical launcher
+
+From the repository root, use `filegrove.cmd` on Windows or `./filegrove.sh` on
+Linux. They locate the release/debug binary and fall back to the development
+launcher. The first run creates the conservative personal profile described in
+[`docs/LAUNCH.md`](docs/LAUNCH.md).
+
 ## Documentation
 
 - [`docs/SPEC.md`](docs/SPEC.md) — Full behavioral specification
