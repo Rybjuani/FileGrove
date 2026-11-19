@@ -39,3 +39,18 @@ filegrove_scaffold.zip
 # Build artifacts
 *.tsbuildinfo
 nexus-cache/
+
+# Local recovery evidence (owner machine only, never commit)
+/08_uncommitted_worktree.patch
+/09_uncommitted_staged.patch
+/12_source_sha256_manifest.csv
+/15_codex_file_actions.csv
+/Codex_Full_Stream.md
+/FileAgent_FULL_HISTORY.bundle
+/FileGrove Technical Blueprint.pdf
+/FileGrove (copia 1).desktop
+/SHA256SUMS
+/File Arbor*
+/reconstructed_final/
+/SPEC.pdf
+/icon.icns
