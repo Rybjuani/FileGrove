@@ -324,7 +324,7 @@ function DuplicateGroupCard({
       <div className="flex items-center gap-2 text-xs text-primary-500">
         <span>{formatBytes(group.size)}</span>
         <span>·</span>
-        <span>{group.duplicates.length + 1} archivos idénticos</span>
+        <span>{t('dedup.identicalFiles', { count: group.duplicates.length + 1 })}</span>
       </div>
 
       {/* Original */}
@@ -363,6 +363,8 @@ function FileRow({
   onToggle?: () => void;
   disabled?: boolean;
 }) {
+  const { t } = useTranslation();
+
   return (
     <label
       className={`flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors ${
@@ -380,7 +382,7 @@ function FileRow({
           onChange={onToggle}
           disabled={disabled}
           className="shrink-0 accent-accent-500"
-          aria-label={`Seleccionar duplicado: ${file.name}`}
+          aria-label={t('dedup.selectDuplicate', { name: file.name })}
         />
       )}
       <span className="min-w-0 flex-1">
