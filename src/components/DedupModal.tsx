@@ -54,6 +54,7 @@ export function DedupModal({
   const [scanning, setScanning] = useState(true);
   const [report, setReport] = useState<DuplicateReport | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
+  const [scanNonce, setScanNonce] = useState(0);
   // Set of duplicate paths currently selected for trashing
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [trashing, setTrashing] = useState(false);
@@ -94,7 +95,7 @@ export function DedupModal({
       disposed = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [folderPath]);
+  }, [folderPath, scanNonce]);
 
   const allDuplicatePaths = report?.groups.flatMap((g) => g.duplicates.map((d) => d.path)) ?? [];
 
@@ -120,34 +121,40 @@ export function DedupModal({
     setTrashError(null);
     try {
       const res = await ipc.dedup.trashDuplicates(paths);
-      if (res.success && res.data) {
-        const { trashed, failed } = res.data;
-        if (failed === 0) {
-          setTrashResult(t('dedup.trashDone', { trashed }));
-        } else {
-          setTrashResult(t('dedup.trashPartial', { trashed, failed }));
-        }
-        // Remove successfully trashed paths from report
-        setReport((prev) => {
-          if (!prev) return prev;
-          const trashedSet = new Set(paths);
-          const newGroups = prev.groups
-            .map((g) => ({
-              ...g,
-              duplicates: g.duplicates.filter((d) => !trashedSet.has(d.path)),
-            }))
-            .filter((g) => g.duplicates.length > 0);
-          const totalDuplicates = newGroups.reduce((acc, g) => acc + g.duplicates.length, 0);
-          const totalWastedBytes = newGroups.reduce(
-            (acc, g) => acc + g.size * g.duplicates.length,
-            0,
-          );
-          return { groups: newGroups, totalDuplicates, totalWastedBytes };
-        });
-        setSelected(new Set());
-      } else {
+      if (!res.success || !res.data) {
         setTrashError(res.error ?? t('dedup.trashError'));
+        return;
       }
+
+      const { trashed, failed } = res.data;
+      if (failed > 0) {
+        setTrashResult(t('dedup.trashPartial', { trashed, failed }));
+        // Re-scan so the report only shows files that still exist.
+        setScanNonce((nonce) => nonce + 1);
+        return;
+      }
+
+      setTrashResult(t('dedup.trashDone', { trashed }));
+      // Remove successfully trashed paths from the report.
+      setReport((prev) => {
+        if (!prev) return prev;
+        const trashedSet = new Set(paths);
+        const newGroups = prev.groups
+          .map((g) => ({
+            ...g,
+            duplicates: g.duplicates.filter((d) => !trashedSet.has(d.path)),
+          }))
+          .filter((g) => g.duplicates.length > 0);
+        const totalDuplicates = newGroups.reduce((acc, g) => acc + g.duplicates.length, 0);
+        const totalWastedBytes = newGroups.reduce(
+          (acc, g) => acc + g.size * g.duplicates.length,
+          0,
+        );
+        return { groups: newGroups, totalDuplicates, totalWastedBytes };
+      });
+      setSelected(new Set());
+    } catch (error) {
+      setTrashError(error instanceof Error ? error.message : t('errors.generic'));
     } finally {
       setTrashing(false);
     }

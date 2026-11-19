@@ -227,7 +227,33 @@ fn component_starts_with(path: &Path, base: &Path) -> bool {
     path == base || path.starts_with(base)
 }
 
+fn is_app_private_path(path: &Path) -> bool {
+    const APP_IDENTIFIER: &str = "app.filegrove.desktop";
+
+    if let Some(base_dirs) = directories::BaseDirs::new() {
+        let data = base_dirs.data_dir().join(APP_IDENTIFIER);
+        let config = base_dirs.config_dir().join(APP_IDENTIFIER);
+        if component_starts_with(path, &data) || component_starts_with(path, &config) {
+            return true;
+        }
+    }
+
+    if let Ok(executable) = std::env::current_exe() {
+        if let Some(directory) = executable.parent() {
+            if component_starts_with(path, directory) {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
 fn is_protected_root(path: &Path) -> bool {
+    if is_app_private_path(path) {
+        return true;
+    }
+
     #[cfg(windows)]
     {
         use std::path::Prefix;
@@ -264,6 +290,24 @@ fn is_protected_root(path: &Path) -> bool {
 mod tests {
     use super::*;
     use std::fs;
+
+    #[test]
+    fn protects_application_data_and_install_directories() {
+        let base = directories::BaseDirs::new().expect("base dirs");
+        let app_data = base.data_dir().join("app.filegrove.desktop");
+        assert!(is_protected_root(&app_data));
+        assert!(is_protected_root(&app_data.join("app.db")));
+
+        let executable_dir = std::env::current_exe()
+            .expect("current exe")
+            .parent()
+            .expect("exe parent")
+            .to_path_buf();
+        assert!(is_protected_root(&executable_dir));
+
+        let temp = tempfile::tempdir().unwrap();
+        assert!(!is_protected_root(temp.path()));
+    }
 
     #[test]
     fn accepts_managed_children_but_rejects_root_and_symlinks() {
