@@ -63,16 +63,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   single-column dashboard until the `xl` breakpoint
 - Simplified Activity history into a compact file/action/result summary with
   technical paths and command details shown only on demand
+- Safe duplicate finder for each watched folder: exact-size grouping followed
+  by streaming SHA-256, the oldest copy marked as the original, and selected
+  duplicates sent only to the system Trash/Recycle Bin
+- Repository guardrails: `.git`, `.hg`, and `.svn` trees are pruned from scans,
+  previews, watchers, and duplicate scans, and repository roots are rejected as
+  watched folders
+- Managed-destination loop protection across the scanner, organizer, and
+  watcher; files already at their destination are skipped, and new folders scan
+  only their root by default
+- Protection for the application database/config directory and the executable
+  directory as watched folders or destinations
+- Per-user Windows NSIS installer and a standalone Windows release build
+
+### Changed
+
+- Canonical launchers now run the bundled release binary and fall back to
+  `npm run tauri:dev`; they no longer start an isolated debug binary
+- Windows path canonicalization uses `dunce` to avoid extended-length prefixes
+- The duplicate dialog refreshes after a partial Trash failure, reports IPC
+  failures, and uses translated headings and accessibility labels
 
 ### Local-testing status
 
 - The interface currently ships in English and Spanish
 - Automatic updates are intentionally excluded
-- Installer smoke testing and sustained real-folder testing remain before a
-  public release
+- The Windows 0.1.0 NSIS installer is ready for multi-day local testing with
+  disposable copies; it is unsigned, so Windows SmartScreen may warn
+- Linux packages remain from the earlier build and still require clean-machine
+  installation, upgrade, and AppImage validation
+- Full release-candidate testing remains in progress
 
 ### Removed
 
-- Scheduled/cron organization from the Linux-first product. Legacy scheduled
+- Scheduled/cron organization from the product. Legacy scheduled
   folders migrate to inactive manual mode while their old schedule data remains
   preserved for compatibility.

@@ -18,9 +18,10 @@ To provide its features, FileGrove may read and store:
 - Undo journal paths and retained overwrite-recovery references.
 - Command fingerprints used to prevent unintended reruns.
 
-This application state is stored in a local SQLite database under the Linux XDG
-application data directory. See `RECOVERY.md` for its location and safe backup
-procedure.
+This application state is stored in a local SQLite database under the per-user
+application data directory: `%APPDATA%\app.filegrove.desktop` on Windows and the
+XDG data directory on Linux. See `RECOVERY.md` for the exact paths and safe
+backup procedure.
 
 ## Data not sent by FileGrove
 
@@ -37,6 +38,9 @@ Desktop notifications are handled locally by the operating system.
   network service. Its behavior is controlled by the command, not FileGrove.
 - Installing packages or visiting project links uses external tools outside the
   FileGrove application.
+- The Windows installer may download the Microsoft WebView2 bootstrapper when
+  the runtime is missing. That request is made by the installer, not by the
+  running application.
 - The operating system, desktop, filesystem, security software, or crash
   reporter may keep its own records under separate policies.
 
@@ -46,8 +50,9 @@ Desktop notifications are handled locally by the operating system.
 - Move Undo sessions remain until used or explicitly dismissed.
 - Folder and rule configuration remains until changed or removed.
 - Command fingerprints remain to prevent repeated command execution.
-- Uninstalling the executable is intended to leave per-user application data in
-  place; package validation is still pending.
+- Uninstalling the executable leaves per-user application data in place. The
+  Windows uninstaller asks before deleting it; Linux package validation is still
+  pending.
 
 Deleting the application data directory permanently removes settings, Activity,
 and FileGrove recovery records, including historical Undo. Quit FileGrove and
@@ -66,6 +71,6 @@ created specifically for public reproduction.
 ## Future changes
 
 Telemetry, accounts, licensing, and paywalls are explicitly out of scope.
-Automatic updates are excluded from the current Linux release phase. Any future
+Automatic updates are excluded from the current local-testing phase. Any future
 feature that changes network or data-processing behavior requires an explicit
 product decision and an updated privacy notice before release.

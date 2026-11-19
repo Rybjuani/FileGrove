@@ -21,18 +21,23 @@ has passed its safety tests.
 Do not use Downloads, Documents, Desktop, a photo library, or the only copy of
 important data for a first run.
 
+On a fresh application data directory, FileGrove creates a conservative profile
+that watches **Desktop** and **Downloads** in Automatic mode and enables launch
+at startup. See [`LAUNCH.md`](LAUNCH.md). Pause everything, remove those folders,
+or use a separate test account before running the first test against real files.
+
 ## What the actions mean
 
 | Action             | Recovery path                   | Recommended use                                 |
 | ------------------ | ------------------------------- | ----------------------------------------------- |
 | Move to folder     | FileGrove Undo                  | Normal organization                             |
-| Move to Trash      | Linux desktop Trash             | Advanced cleanup with OS recovery               |
+| Move to Trash      | System Trash / Recycle Bin      | Advanced cleanup with OS recovery               |
 | Delete permanently | None                            | Disposable files only unless absolutely certain |
 | Run command        | Depends entirely on the command | Trusted advanced workflows only                 |
 
 Only moves are restored by FileGrove Undo. Trash restoration belongs to the
-desktop environment. Permanent deletion and external command effects cannot be
-reversed by FileGrove.
+operating system (Linux Trash or Windows Recycle Bin). Permanent deletion and
+external command effects cannot be reversed by FileGrove.
 
 ## Conflicts and duplicates
 
@@ -46,12 +51,30 @@ Other options:
 - **Skip** leaves the source untouched.
 - **Overwrite** replaces the destination but retains a recovery copy only
   while the related Undo session remains available.
-- **Send duplicate to Trash** relies on desktop Trash recovery.
+- **Send duplicate to Trash** relies on system Trash / Recycle Bin recovery.
 - **Delete duplicate permanently** has no recovery path and requires explicit
   confirmation.
 
 Do not dismiss an Undo session after overwrite until the result and retained
 destination file have been verified.
+
+## Finding duplicate files
+
+The duplicate finder is separate from rule-based organization. It scans one
+watched folder, groups files by exact size, and confirms candidates with a
+streaming SHA-256 hash. The oldest copy is shown as the **Original**; the other
+copies are the duplicates.
+
+1. Open the folder card and choose **Find duplicates**.
+2. Review the grouped result and the amount of wasted space.
+3. Keep the original and clear any duplicate you want to retain.
+4. Choose **Move selected to Trash** and confirm.
+5. Restore anything you need from the system Trash / Recycle Bin.
+
+The dialog never permanently deletes files. It sends only the selected
+duplicates to the system Trash / Recycle Bin. If some files fail, the report is
+rescanned so the failed files remain visible. Repository trees are skipped, and
+the scan honors the folder's exclusions.
 
 ## Manual and Automatic modes
 
@@ -62,6 +85,10 @@ destination file have been verified.
 - Confirmed subfolder scanning can be used with Automatic; depth, exclusions,
   and destination layout should be reviewed first.
 - Managed destination folders are excluded from reprocessing to avoid loops.
+- Git, Mercurial, and SVN repository roots cannot be watched. Repository trees
+  nested inside a watched folder are skipped by scanning, preview, the watcher,
+  and duplicate cleanup.
+- New folders scan only their root by default. Enable recursion deliberately.
 
 For a busy folder, pause Automatic before changing many rules. Use Preview,
 then resume when the configuration is ready.
@@ -83,7 +110,7 @@ then resume when the configuration is ready.
 - Rule priority matters: the first enabled matching rule wins.
 - A destination outside the selected root is an advanced configuration.
 - Regular expressions should be tested against disposable names.
-- Command rules run with the permissions of the signed-in Linux user.
+- Command rules run with the permissions of the signed-in user.
 - A command can access the network or alter files outside FileGrove's safety
   boundary. FileGrove cannot undo those external effects.
 

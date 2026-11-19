@@ -1,13 +1,28 @@
 # FileGrove roadmap to 1.0
 
-FileGrove is developed Linux-first. Windows remains a future compatibility
-target. The repository stays private and releases remain drafts until the
-release-candidate gate.
+FileGrove is developed on Linux and Windows. This roadmap tracks the Linux 1.0
+gates; Windows is currently a separate local-testing target and is not part of
+the Linux 1.0 release scope. The repository stays private and releases remain
+drafts until the release-candidate gate.
+
+Current phase (November 2026): the Windows `0.1.0` NSIS build is in multi-day
+local testing. See [`TESTING_WINDOWS.md`](TESTING_WINDOWS.md). That test phase
+does not close the Linux package gates below.
 
 Manual testing by the product owner is deliberately concentrated near 1.0.
 Earlier milestones should rely on disposable directories and automated tests;
 request a small manual check only when desktop behavior cannot be verified
 reliably in automation.
+
+## Windows local testing (current, outside Linux 1.0)
+
+- [x] Build a per-user NSIS installer
+- [x] Pass the frontend suite and the Rust library suite on Windows
+- [x] Add the safe duplicate finder and repository guardrails
+- [ ] Complete the multi-day disposable-file test checklist
+- [ ] Reproduce the `watcher_service` integration binary failure on a second
+      Windows machine or confirm it is specific to this development PC
+- [ ] Decide whether Windows becomes a separately supported release target
 
 ## 0.2 — Core file safety
 

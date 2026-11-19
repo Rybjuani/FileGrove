@@ -19,8 +19,7 @@ price list.
 
 There must be no FileGrove license server, trial, paywall, account, usage cap,
 HWID check, telemetry requirement, or feature split between free and paid
-editions. The Linux-first product should provide the following capabilities to
-every user:
+editions. The product should provide the following capabilities to every user:
 
 | Capability                | FileGrove target                                                                                                   |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -40,9 +39,9 @@ safety boundary and does not turn into a paid plan.
 
 ## Scheduling decision
 
-The competitor advertises scheduled executions. The current FileGrove Linux 1.0
-scope intentionally retires the old scheduled/cron mode: Automatic mode is the
-core workflow, and Manual mode remains available for explicit control. This is
+The competitor advertises scheduled executions. The current FileGrove 1.0 scope
+intentionally retires the old scheduled/cron mode: Automatic mode is the core
+workflow, and Manual mode remains available for explicit control. This is
 an intentional product decision, not a missing free-versus-Pro restriction.
 
 If the owner later decides that scheduled execution is necessary for complete

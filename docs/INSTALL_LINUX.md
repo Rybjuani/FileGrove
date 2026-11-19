@@ -4,6 +4,10 @@ FileGrove is still a private release candidate. The packages described here
 exist locally, but the full clean-machine installation matrix has not passed
 yet. Use only disposable folders until the 1.0 release gate is complete.
 
+The current Windows `0.1.0` local test build is documented separately in
+[`TESTING_WINDOWS.md`](TESTING_WINDOWS.md). The Linux package instructions below
+remain the reference for the Linux release track.
+
 ## Available package formats
 
 The current `amd64` build produces:

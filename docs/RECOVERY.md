@@ -46,13 +46,28 @@ dismiss the session until the overwrite result is accepted.
 ## Trash and permanent deletion
 
 - **Move to Trash** has no FileGrove Undo. Restore the item through the Linux
-  desktop Trash.
-- **Delete permanently** has no recovery mechanism in FileGrove or the desktop
+  Trash or the Windows Recycle Bin.
+- **Delete permanently** has no recovery mechanism in FileGrove or the system
   Trash.
 - Exact-duplicate permanent deletion has the same limitation.
+- The visual duplicate finder never permanently deletes. It sends only the
+  selected duplicates to the system Trash / Recycle Bin.
 
 If a permanent deletion was interrupted, Activity records that its result needs
 review. Inspect the original path before authorizing any retry.
+
+## Duplicate cleanup
+
+The duplicate finder groups files by exact size and confirms them with a
+streaming SHA-256 hash. The oldest copy is marked as the original; only the
+other copies can be selected. The operation sends the selected duplicates to
+the system Trash / Recycle Bin.
+
+- Restore a duplicate from the Windows Recycle Bin or the Linux Trash.
+- If the operation reports a partial failure, the dialog rescans the folder so
+  the files that were not moved remain visible.
+- FileGrove does not keep a separate duplicate-cleanup journal; the system
+  Trash / Recycle Bin is the recovery path.
 
 ## Interrupted commands
 
@@ -65,7 +80,13 @@ remote service, or a script.
 
 ## Back up FileGrove state
 
-When `XDG_DATA_HOME` is set, the application data directory is:
+On Windows, the application data directory is:
+
+```text
+%APPDATA%\app.filegrove.desktop\
+```
+
+On Linux, when `XDG_DATA_HOME` is set, it is:
 
 ```text
 $XDG_DATA_HOME/app.filegrove.desktop/
@@ -95,13 +116,15 @@ a copy of the current directory. Prefer the same application version first; let
 normal migrations run before upgrading further.
 
 Restoring the database restores FileGrove's records, not files that were
-permanently deleted or external command effects. Undo can succeed only while
-the filesystem paths and retained recovery copies still exist.
+permanently deleted, sent to the system Trash, or changed by external commands.
+Undo can succeed only while the filesystem paths and retained recovery copies
+still exist.
 
 ## Information to preserve for a bug report
 
 - FileGrove version and commit if known.
-- Linux distribution, desktop, and X11/Wayland session.
+- Windows version and build number, or Linux distribution, desktop, and
+  X11/Wayland session.
 - The exact action and whether Manual or Automatic was active.
 - The visible error and relevant Activity entry.
 - A directory listing of the disposable source and destination.
