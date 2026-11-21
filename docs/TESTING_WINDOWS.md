@@ -20,9 +20,9 @@ src-tauri/target/release/bundle/nsis/FileGrove_0.1.0_x64-setup.exe
   the WebView2 Runtime; if it is missing, the installer downloads it and needs
   internet access.
 - The installer is **unsigned**, so Windows SmartScreen may show a warning.
-- Size: 2,532,904 bytes (about 2.42 MB).
+- Size: 2,541,285 bytes (about 2.42 MiB).
 - SHA-256:
-  `a647e60dea49ab046d931c86a7cdc7bbeb5145981eb9985c8daffffeafab168c`
+  `db606b64c4cf01ce09a4d38a01b0a5588d75253019bb7c52c253e7b3c1fdc493`
 
 Verify the file before running it:
 
@@ -32,33 +32,19 @@ Get-FileHash .\FileGrove_0.1.0_x64-setup.exe -Algorithm SHA256
 
 - The portable release binary is
   `src-tauri/target/release/filegrove.exe` (SHA-256
-  `5a1436a054351f21ec22df762c089eee859e177eabb6cf9dbcbd052dfadf6202`). It runs
+  `caca8ce123cc5db23260be73e20c867c42efbbcdf870e60d9f2b80c5c6e7b419`). It runs
   without installation but uses the same per-user application data directory.
 
 ## Read this before the first launch
 
-On a fresh application data directory, FileGrove creates the conservative
-personal profile described in [`LAUNCH.md`](LAUNCH.md):
+On a fresh application data directory, FileGrove does not add folders,
+assign rules, organize files in the background, or enable launch at startup.
+The onboarding dialog remains available. Add a disposable folder yourself;
+new folders start in Manual mode and stopped. Enable Automatic mode and launch
+at startup only if you choose to test those settings.
 
-- It watches **Desktop** and **Downloads** in **Automatic** mode.
-- It moves matching images, documents/text files, and videos to Pictures,
-  Documents, and Videos.
-- It enables **launch at startup**.
-- It keeps both files when contents are identical, renames on name conflicts,
-  and does not enable permanent deletion or command rules.
-- It marks onboarding as completed.
-
-That profile is intentionally conservative, but it still changes file locations.
-For a no-surprise test:
-
-1. Prefer a separate Windows account or a disposable VM.
-2. Or pause all folders and remove the automatically created Desktop/Downloads
-   entries before placing test files in them.
-3. Or use only a dedicated test folder and keep an untouched backup elsewhere.
-
-To pause everything, use the dashboard or the tray menu. To stop FileGrove
-completely, choose **Quit** in the tray; closing the window may only hide it.
-Launch at startup can be disabled in **Settings**.
+To stop FileGrove completely, choose **Quit** in the tray; closing the window
+may only hide it. Existing saved configurations are preserved when updating.
 
 ## Test data and recovery
 

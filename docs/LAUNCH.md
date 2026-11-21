@@ -41,42 +41,25 @@ src-tauri\target\release\bundle\nsis\FileGrove_0.1.0_x64-setup.exe
 La guía completa de la fase de pruebas está en
 [`TESTING_WINDOWS.md`](TESTING_WINDOWS.md).
 
-## Perfil predeterminado
+## Primer inicio y automatizacion
 
-En el primer arranque de una base de datos nueva FileGrove crea un perfil
-idempotente para las carpetas estándar del usuario. Las instalaciones que ya
-tienen carpetas configuradas se conservan intactas:
+Una instalacion nueva no agrega carpetas vigiladas ni reglas, no organiza
+archivos en segundo plano y no activa el inicio con Windows. La aplicacion
+muestra el onboarding y espera a que el usuario agregue una carpeta.
 
-- Escritorio: sólo archivos directamente dentro del Escritorio; no entra en
-  repositorios ni en ninguna subcarpeta.
-- Downloads: sólo archivos directamente dentro de Downloads; no entra en
-  subcarpetas.
-- Documentos, imágenes y vídeos: se mueven a las bibliotecas estándar del
-  sistema del usuario.
+Las carpetas nuevas empiezan en modo Manual y detenidas. El usuario puede
+revisar una Vista previa y organizar manualmente; el modo Automatico se activa
+solo cuando el usuario lo elige. El inicio con Windows es una preferencia
+independiente y tambien queda desactivada por defecto.
 
-Las rutas se obtienen de las carpetas conocidas del sistema operativo, no de
-una letra de disco fija. En una instalación normal apuntan al perfil del
-usuario en `C:`, y las carpetas que el usuario haya reubicado (por ejemplo,
-Descargas o Imágenes en `D:`) se respetan automáticamente.
-
-El perfil sólo habilita movimientos para documentos, imágenes y vídeos. Usa
-renombrado ante conflictos, conserva duplicados y no activa borrado permanente.
-Cada movimiento pasa por el journal de Undo existente.
-
-El perfil también activa el inicio con Windows y marca el onboarding como
-completado. Para una prueba sin sorpresas, usar una cuenta de Windows separada,
-pausar todo antes de copiar archivos reales, o quitar las carpetas creadas
-automáticamente.
-
-La primera ejecución sobre datos reales debe revisarse en Activity y comenzar
-con archivos de prueba. Para pausar todo, usar el control de pausa de FileGrove;
-la pausa queda guardada incluso si la aplicación se reinicia.
+Al actualizar una instalacion existente, FileGrove conserva las carpetas,
+reglas y preferencias ya guardadas.
 
 ## Inicio con Windows
 
 El backend reconcilia la preferencia `launchAtStartup` mediante el plugin de
-autostart de Tauri. El perfil inicial la activa. Se puede desactivar desde
-Settings; no hace falta crear accesos directos manualmente.
+autostart de Tauri. En una instalacion nueva la preferencia queda desactivada;
+el usuario puede habilitarla desde Settings.
 
 ## Datos y recuperación
 

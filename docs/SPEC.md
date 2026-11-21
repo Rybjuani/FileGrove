@@ -424,6 +424,11 @@ erDiagram
 | `subfolderDefaults.excludeFolders` | string[] | `[]` | |
 | `subfolderDefaults.excludePatterns` | string[] | `[]` | |
 
+On a fresh install, FileGrove creates no watched folders or rules. Newly added
+folders start in Manual mode and stopped; Automatic mode and launch at startup
+require separate explicit user choices. Updating an existing installation
+preserves its saved folder and startup preferences.
+
 ### 4.3 Predefined file-extension buckets
 
 These power the six quick rules. Reuse as-is or expand.

@@ -21,10 +21,12 @@ has passed its safety tests.
 Do not use Downloads, Documents, Desktop, a photo library, or the only copy of
 important data for a first run.
 
-On a fresh application data directory, FileGrove creates a conservative profile
-that watches **Desktop** and **Downloads** in Automatic mode and enables launch
-at startup. See [`LAUNCH.md`](LAUNCH.md). Pause everything, remove those folders,
-or use a separate test account before running the first test against real files.
+On a fresh application data directory, FileGrove does not add watched
+folders or rules, organize files automatically, or enable launch at startup.
+New folders start in Manual mode and stopped. The user chooses which folders
+to add, when to organize them, and whether to enable Automatic mode. Launch at
+startup is a separate opt-in in Settings. Existing saved configurations are
+preserved when updating.
 
 ## What the actions mean
 

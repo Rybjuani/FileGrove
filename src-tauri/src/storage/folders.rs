@@ -149,14 +149,15 @@ impl FolderRepo {
         )?;
 
         for template in QUICK_RULES {
+            let canonical_id = quick_rule_id(template.id).to_string();
             let existing = {
                 let mut statement = transaction.prepare(
                     "SELECT id, action FROM rules \
                      WHERE is_quick_rule = 1 AND icon = ?1 AND ?2 = 0 \
-                     ORDER BY created_at ASC",
+                     ORDER BY CASE WHEN id = ?3 THEN 0 ELSE 1 END, created_at ASC",
                 )?;
                 let rows = statement.query_map(
-                    rusqlite::params![template.icon, destinations.is_some() as i32],
+                    rusqlite::params![template.icon, destinations.is_some() as i32, canonical_id],
                     |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
                 )?;
                 let mut existing = None;
@@ -195,7 +196,7 @@ impl FolderRepo {
                     .map(String::as_str)
                     .unwrap_or(relative_destination);
                 let rule = Rule {
-                    id: Uuid::new_v4(),
+                    id: quick_rule_id(template.id),
                     name: name.to_string(),
                     is_quick_rule: true,
                     enabled: true,
@@ -214,7 +215,7 @@ impl FolderRepo {
                     created_at: chrono::Utc::now(),
                 };
                 transaction.execute(
-                    "INSERT INTO rules (id, name, is_quick_rule, enabled, \"order\", icon, conditions, action, created_at) \
+                    "INSERT OR IGNORE INTO rules (id, name, is_quick_rule, enabled, \"order\", icon, conditions, action, created_at) \
                      VALUES (?1, ?2, 1, 1, ?3, ?4, ?5, ?6, ?7)",
                     rusqlite::params![
                         rule.id.to_string(),
@@ -246,7 +247,17 @@ impl FolderRepo {
     }
 }
 
-fn localized_quick_rule(icon: &str, language: &str) -> (&'static str, &'static str) {
+pub(crate) fn quick_rule_id(template_id: &str) -> Uuid {
+    // Stable UUID namespace for built-in rules; independent of locale and app restarts.
+    let index = QUICK_RULES
+        .iter()
+        .position(|template| template.id == template_id)
+        .expect("quick rule template must be registered") as u128
+        + 1;
+    Uuid::from_u128(0x66696c6567726f766500000000000000 | index)
+}
+
+pub(crate) fn localized_quick_rule(icon: &str, language: &str) -> (&'static str, &'static str) {
     if language == "es" {
         match icon {
             "Image" => ("Imágenes", "Imágenes"),
@@ -366,9 +377,20 @@ mod tests {
 
         let second = database
             .folders()
-            .apply_recommended_rules(folder.id, "es")
+            .apply_recommended_rules(folder.id, "en")
             .unwrap();
         assert_eq!(second.rule_ids, first.rule_ids);
+        database.run_migrations().unwrap();
+        let after_restart = database
+            .folders()
+            .apply_recommended_rules(folder.id, "es")
+            .unwrap();
+        assert_eq!(after_restart.rule_ids, first.rule_ids);
         assert_eq!(database.rules().list().unwrap().len(), QUICK_RULES.len());
+        assert!(first.rule_ids.iter().all(|id| {
+            QUICK_RULES
+                .iter()
+                .any(|template| quick_rule_id(template.id) == *id)
+        }));
     }
 }

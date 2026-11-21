@@ -97,10 +97,10 @@ development launcher (`npm run tauri:dev`) otherwise. Pass `--dev` to force the
 development launcher. Rebuild the release binary after source changes, or the
 launcher will keep starting the previous build.
 
-The first run creates the conservative personal profile described in
-[`docs/LAUNCH.md`](docs/LAUNCH.md). It watches Desktop and Downloads in
-Automatic mode and enables launch at startup; pause it or use a separate test
-account before pointing it at real files.
+A fresh install does not add watched folders, organize files in the
+background, or enable launch at startup. Add folders yourself; they start in
+Manual mode, and Automatic mode is enabled only when you choose it. See
+[`docs/LAUNCH.md`](docs/LAUNCH.md) and [`docs/SAFE_USE.md`](docs/SAFE_USE.md).
 
 ## Documentation
 
