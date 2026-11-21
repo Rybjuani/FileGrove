@@ -258,8 +258,36 @@ fn init_tracing() {
     let env_filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new("info,filegrove=debug"));
 
-    tracing_subscriber::registry()
+    let base = tracing_subscriber::registry()
         .with(env_filter)
-        .with(fmt::layer().with_target(false))
-        .init();
+        .with(fmt::layer().with_target(false));
+
+    // Persist logs to `<app_data_dir>/logs/filegrove.log` (daily rotation),
+    // keeping the stdout layer. `init_tracing` runs before any AppHandle
+    // exists, so resolve the data dir via `directories::BaseDirs`, the same
+    // way `paths::safety` does. Logging failures must never block startup.
+    match file_log_appender() {
+        Some(appender) => base
+            .with(
+                fmt::layer()
+                    .with_target(false)
+                    .with_ansi(false)
+                    .with_writer(appender),
+            )
+            .init(),
+        None => base.init(),
+    }
+}
+
+/// Daily rolling file appender under `<data_dir>/app.filegrove.desktop/logs`.
+/// Returns `None` (stdout-only logging) when the directory cannot be resolved
+/// or created.
+#[cfg(not(test))]
+fn file_log_appender() -> Option<tracing_appender::rolling::RollingFileAppender> {
+    let log_dir = directories::BaseDirs::new()?
+        .data_dir()
+        .join("app.filegrove.desktop")
+        .join("logs");
+    std::fs::create_dir_all(&log_dir).ok()?;
+    Some(tracing_appender::rolling::daily(log_dir, "filegrove.log"))
 }

@@ -689,6 +689,19 @@ impl<'a> Organizer<'a> {
         if matches!(action, Action::RunCommand { .. }) && result.skipped {
             return true;
         }
+        // Failed moves are the top support signal; log them with enough
+        // detail to diagnose filesystem/destination problems from the log
+        // file alone.
+        if !result.success && !result.skipped {
+            if let Action::Move { destination } = action {
+                tracing::warn!(
+                    source = %file.path,
+                    destination = %destination,
+                    error_code = result.error.as_deref().unwrap_or("UNKNOWN"),
+                    "move failed"
+                );
+            }
+        }
         let entry = self.activity_entry(Uuid::new_v4(), file, action, rule_id, rule_name, result);
         if let Err(error) = self.db.activity().insert(&entry) {
             tracing::warn!("failed to record activity: {error}");
