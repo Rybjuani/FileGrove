@@ -26,6 +26,15 @@ pub const DEFAULT_EXCLUDE_FOLDERS: &[&str] = &[
     "Pods",
     ".terraform",
     "venv",
+    // Drive-level system folders. They are inaccessible or meaningless to
+    // scan, and can appear when a whole secondary drive is watched.
+    "$RECYCLE.BIN",
+    "System Volume Information",
+    "Recovery",
+    "Config.Msi",
+    ".Trash-1000",
+    // A Steam library can contain hundreds of thousands of game files.
+    "SteamLibrary",
 ];
 
 #[derive(Debug, Error)]
@@ -239,6 +248,32 @@ mod tests {
         assert!(filter.is_ignored(&root.join("nested/download.tmp")));
         assert!(filter.is_ignored(&root.join("exports/old/report.bak")));
         assert!(!filter.is_ignored(&root.join("private/other/report.pdf")));
+    }
+
+    #[test]
+    fn ignores_drive_metadata_and_game_library_folders_by_default() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("root");
+        fs::create_dir(&root).unwrap();
+        let filter = PathFilter::new(&root, &[], &[]).unwrap();
+
+        for folder in [
+            "$RECYCLE.BIN",
+            "System Volume Information",
+            "Recovery",
+            "Config.Msi",
+            ".Trash-1000",
+            "SteamLibrary",
+        ] {
+            assert!(
+                filter.is_ignored(&root.join(folder)),
+                "{folder} should be ignored"
+            );
+            assert!(
+                filter.is_ignored(&root.join(folder).join("nested").join("file.bin")),
+                "{folder} contents should be ignored"
+            );
+        }
     }
 
     #[test]

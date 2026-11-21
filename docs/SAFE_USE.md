@@ -39,6 +39,10 @@ Only moves are restored by FileGrove Undo. Trash restoration belongs to the
 operating system (Linux Trash or Windows Recycle Bin). Permanent deletion and
 external command effects cannot be reversed by FileGrove.
 
+On Windows the Recycle Bin is per volume: a file removed from `F:` is kept in
+`F:\$RECYCLE.BIN`, not on the Windows drive. FileGrove never relocates or
+redirects the system Trash / Recycle Bin.
+
 ## Conflicts and duplicates
 
 The safe defaults are:

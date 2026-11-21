@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-volume moves with explicit rename/overwrite/skip behavior
 - Recursive scanner with depth, excludes, preserved relative structure,
   progress throttling, and a 100,000-file safety cap
+- Secondary Windows drive roots as watched folders, with the system drive kept
+  protected and drive metadata folders (`$RECYCLE.BIN`, `System Volume
+  Information`, `Recovery`, `Config.Msi`, `.Trash-1000`, `SteamLibrary`)
+  ignored by default
 - Watcher service with functional pause/resume and startup restoration
 - Cooperative organization and command cancellation, plus retryable undo
   sessions that do not overwrite existing files

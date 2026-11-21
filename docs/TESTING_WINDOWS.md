@@ -67,6 +67,8 @@ Launch at startup can be disabled in **Settings**.
 - Keep an untouched backup outside every watched root.
 - Moves are restored with **Undo latest** on the folder card.
 - Duplicate cleanup and Trash actions are restored from the Windows Recycle Bin.
+  The Recycle Bin is per volume, so files removed from a secondary drive stay on
+  that drive (for example, `F:\$RECYCLE.BIN`).
 - Permanent deletion and command actions have no FileGrove recovery.
 - Application state lives at
   `%APPDATA%\app.filegrove.desktop\app.db` (plus temporary `-wal` and `-shm`
@@ -92,6 +94,12 @@ Launch at startup can be disabled in **Settings**.
 
 - [ ] Add a disposable folder and confirm a Git, Mercurial, or SVN repository
       root is rejected with a clear message.
+- [ ] On Windows, select a secondary drive root (for example `D:\`) and confirm
+      it is accepted; confirm the system drive root (normally `C:\`) is rejected
+      as protected.
+- [ ] With a secondary drive watched recursively, confirm `$RECYCLE.BIN`,
+      `System Volume Information`, `Recovery`, `Config.Msi`, `.Trash-1000`, and
+      `SteamLibrary` are skipped.
 - [ ] Add a parent folder that contains a repository and confirm files outside
       the repository are visible while repository contents are ignored.
 - [ ] Apply the recommended categories and review the grouped **Preview**.

@@ -441,8 +441,14 @@ These power the six quick rules. Reuse as-is or expand.
 
 `node_modules`, `.git`, `.svn`, `.hg`, `dist`, `build`, `.next`, `.turbo`,
 `.parcel-cache`, `.cache`, `coverage`, `target`, `.gradle`, `.idea`,
-`.vscode`, `vendor`, `Pods`, `.terraform`, `venv`, plus OS-specific
-`.Trash-*` glob and `.DS_Store`/`Thumbs.db`/`desktop.ini` filenames.
+`.vscode`, `vendor`, `Pods`, `.terraform`, `venv`, `$RECYCLE.BIN`,
+`System Volume Information`, `Recovery`, `Config.Msi`, `.Trash-1000`,
+`SteamLibrary`, plus OS-specific `.Trash-*` glob and
+`.DS_Store`/`Thumbs.db`/`desktop.ini` filenames.
+
+The drive-level names are pruned when a whole secondary drive is selected as
+a watched root, so the scan never descends into the Recycle Bin, Windows
+system metadata, or a Steam library.
 
 ---
 
@@ -931,6 +937,7 @@ migration.
 - `move` destination must be **outside** the watched folder root (otherwise the file would re-trigger rules in `auto` mode). Validate and reject with `INVALID_DESTINATION`.
 - `move` destination must not escape via `..` traversal. Validate and reject with `INVALID_DESTINATION_TRAVERSAL`.
 - `move` destination must not be a protected system path (`/`, `/System`, `C:\Windows`, etc.). Reject with `INVALID_DESTINATION_PROTECTED`.
+- On Windows, a whole secondary drive root may be watched, but the system drive root (`%SystemDrive%`, normally `C:`) stays protected and is rejected with `WATCHED_FOLDER_PROTECTED`. Destination directories remain protected on every drive.
 - `delete` target must be **inside** the watched folder root. Reject with `WATCHED_FOLDER_PROTECTED` otherwise.
 - All path validation uses canonicalized absolute paths.
 

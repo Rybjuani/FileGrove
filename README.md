@@ -21,7 +21,8 @@ is based on the behavioral specification in [`docs/SPEC.md`](docs/SPEC.md).
 
 ## Features
 
-- Watch multiple folders simultaneously
+- Watch multiple folders simultaneously, including whole secondary drive
+  roots on Windows (the system drive is always protected)
 - Rule engine with 9 condition types (extension, name contains/starts/ends, regex, size, age)
 - Two clear folder modes: manual and automatic (real-time)
 - Path templates with date and EXIF tokens (`{year}/{month}/{name}`)

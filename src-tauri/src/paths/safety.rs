@@ -34,7 +34,7 @@ pub fn validate_scan_root(path: &Path) -> Result<PathBuf> {
     if !metadata.is_dir() {
         return Err(anyhow!("WATCHED_FOLDER_INVALID"));
     }
-    if is_protected_root(&canonical) {
+    if is_protected_scan_root(&canonical) {
         return Err(anyhow!("WATCHED_FOLDER_PROTECTED"));
     }
     if canonical.join(".git").exists()
@@ -249,6 +249,86 @@ fn is_app_private_path(path: &Path) -> bool {
     false
 }
 
+#[cfg(windows)]
+fn drive_root_letter(path: &Path) -> Option<u8> {
+    use std::path::Prefix;
+
+    let mut components = path.components();
+    let letter = match components.next() {
+        Some(Component::Prefix(prefix)) => match prefix.kind() {
+            Prefix::Disk(letter) | Prefix::VerbatimDisk(letter) => letter,
+            _ => return None,
+        },
+        _ => return None,
+    };
+    if components.next() == Some(Component::RootDir) && components.next().is_none() {
+        Some(letter.to_ascii_uppercase())
+    } else {
+        None
+    }
+}
+
+#[cfg(windows)]
+fn drive_letter_of(path: &Path) -> Option<u8> {
+    use std::path::Prefix;
+
+    match path.components().next()? {
+        Component::Prefix(prefix) => match prefix.kind() {
+            Prefix::Disk(letter) | Prefix::VerbatimDisk(letter) => {
+                Some(letter.to_ascii_uppercase())
+            }
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+/// Resolve the drive where Windows is installed. `SystemDrive` is the
+/// canonical source, but `SystemRoot`/`windir` and the running executable
+/// cover stripped environments and tests.
+#[cfg(windows)]
+fn system_drive_letter() -> u8 {
+    fn parse(value: &std::ffi::OsStr) -> Option<u8> {
+        let value = value.to_string_lossy();
+        let mut chars = value.chars();
+        let letter = chars.next()?;
+        if !letter.is_ascii_alphabetic() {
+            return None;
+        }
+        match chars.next() {
+            None | Some(':') | Some('\\') | Some('/') => Some(letter.to_ascii_uppercase() as u8),
+            _ => None,
+        }
+    }
+
+    ["SystemDrive", "SystemRoot", "windir"]
+        .into_iter()
+        .find_map(|name| std::env::var_os(name).and_then(|value| parse(&value)))
+        .or_else(|| {
+            std::env::current_exe()
+                .ok()
+                .and_then(|exe| drive_letter_of(&exe))
+        })
+        .unwrap_or(b'C')
+}
+
+/// Watched roots may be a whole secondary drive, but never the system drive
+/// (it holds the OS and the user profile) nor any app-private location.
+fn is_protected_scan_root(path: &Path) -> bool {
+    if is_app_private_path(path) {
+        return true;
+    }
+
+    #[cfg(windows)]
+    {
+        drive_root_letter(path).is_some_and(|letter| letter == system_drive_letter())
+    }
+    #[cfg(not(windows))]
+    {
+        is_protected_root(path)
+    }
+}
+
 fn is_protected_root(path: &Path) -> bool {
     if is_app_private_path(path) {
         return true;
@@ -256,17 +336,7 @@ fn is_protected_root(path: &Path) -> bool {
 
     #[cfg(windows)]
     {
-        use std::path::Prefix;
-        let mut components = path.components();
-        if let Some(Component::Prefix(prefix)) = components.next() {
-            if matches!(prefix.kind(), Prefix::Disk(_) | Prefix::VerbatimDisk(_))
-                && components.next() == Some(Component::RootDir)
-                && components.next().is_none()
-            {
-                return true;
-            }
-        }
-        false
+        drive_root_letter(path).is_some()
     }
     #[cfg(not(windows))]
     {
@@ -341,6 +411,22 @@ mod tests {
             )
             .is_err());
         }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn allows_secondary_drive_roots_but_protects_the_system_drive() {
+        let system = system_drive_letter();
+        let system_root = PathBuf::from(format!("{}:\\", system as char));
+        assert!(is_protected_root(&system_root));
+        assert!(is_protected_scan_root(&system_root));
+
+        let secondary = if system == b'C' { b'D' } else { b'C' };
+        let secondary_root = PathBuf::from(format!("{}:\\", secondary as char));
+        // Destinations stay protected on every drive...
+        assert!(is_protected_root(&secondary_root));
+        // ...but a whole secondary drive is a valid watched root.
+        assert!(!is_protected_scan_root(&secondary_root));
     }
 
     #[test]

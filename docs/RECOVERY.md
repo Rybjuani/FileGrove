@@ -47,6 +47,9 @@ dismiss the session until the overwrite result is accepted.
 
 - **Move to Trash** has no FileGrove Undo. Restore the item through the Linux
   Trash or the Windows Recycle Bin.
+- On Windows the Recycle Bin is per volume: an item removed from `F:` is kept
+  in `F:\$RECYCLE.BIN`, not on the Windows drive. FileGrove never relocates or
+  redirects the system Trash / Recycle Bin.
 - **Delete permanently** has no recovery mechanism in FileGrove or the system
   Trash.
 - Exact-duplicate permanent deletion has the same limitation.

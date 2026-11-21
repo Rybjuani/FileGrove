@@ -35,6 +35,8 @@ src-tauri\target\release\bundle\nsis\FileGrove_0.1.0_x64-setup.exe
 - El desinstalador permite conservar los datos de la aplicación. Dejar
   desmarcada la opción de borrar datos si se quiere mantener la configuración,
   las reglas, el historial y el Undo.
+- El instalador no incluye carpetas, reglas ni rutas del equipo donde se
+  compiló: la configuración se crea en el primer arranque de cada equipo.
 
 La guía completa de la fase de pruebas está en
 [`TESTING_WINDOWS.md`](TESTING_WINDOWS.md).
@@ -51,6 +53,11 @@ tienen carpetas configuradas se conservan intactas:
   subcarpetas.
 - Documentos, imágenes y vídeos: se mueven a las bibliotecas estándar del
   sistema del usuario.
+
+Las rutas se obtienen de las carpetas conocidas del sistema operativo, no de
+una letra de disco fija. En una instalación normal apuntan al perfil del
+usuario en `C:`, y las carpetas que el usuario haya reubicado (por ejemplo,
+Descargas o Imágenes en `D:`) se respetan automáticamente.
 
 El perfil sólo habilita movimientos para documentos, imágenes y vídeos. Usa
 renombrado ante conflictos, conserva duplicados y no activa borrado permanente.
@@ -86,3 +93,7 @@ bandeja y confirmar que no queda ningún proceso `filegrove`.
 Los movimientos se recuperan con **Undo latest**. Los elementos enviados a la
 Papelera o al Recycle Bin se recuperan desde el sistema operativo. El borrado
 permanente y los comandos externos no tienen recuperación de FileGrove.
+
+La Papelera de Windows es por volumen: un archivo eliminado desde `F:` se
+conserva en `F:\$RECYCLE.BIN` y no consume espacio en `C:`. FileGrove no
+redirige ni reubica la Papelera del sistema.
