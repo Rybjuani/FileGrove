@@ -5,7 +5,7 @@
 
 ## Estado
 
-T9: versión arreglada instalada, pendiente prueba visual del usuario.
+T9: versión arreglada instalada, Instalada y corriendo, automatización pausada, pendiente prueba visual del usuario.
 
 ## Hecho
 
@@ -19,7 +19,11 @@ T9: versión arreglada instalada, pendiente prueba visual del usuario.
     pre-fixes), después 2026-11-21 23:32:10,
     `C:\Users\nosom\AppData\Local\FileGrove\filegrove.exe`.
   - Proceso viejo muerto antes de instalar; sin procesos `filegrove.exe`
-    vivos al terminar; la app NO fue lanzada.
+    vivos al instalar.
+  - Addendum: automatización global fijada en pausa en la DB
+    (`automationPaused = 'true'`, verificado con SELECT) antes del primer
+    arranque; la app nueva fue lanzada (23:40:09, "FileGrove ready", log T1
+    activo) con `F:\` en pausa — no mueve nada sola.
   - Detalle: `docs/diagnostics/2026-11-22-deploy.md`.
 - T6 (commit `7428fe7`):
   - `src-tauri/src/ipc/files.rs` (`organize_inner_with_gate`): los aborts
