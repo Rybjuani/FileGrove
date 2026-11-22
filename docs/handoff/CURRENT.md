@@ -5,39 +5,36 @@
 
 ## Estado
 
-T5 completa, moves exFAT verificados.
+T6 completa, gate de escaneo relajado, verificado.
 
 ## Hecho
 
-- Commits 1-5 (T1-T4): T1 logs a archivo, T2 dump de actividad + reporte,
-  T3 forense de rutas, T4 corrección de la evidencia + fix de
-  `component_starts_with` (boundaries de drive + des-verbatim) con tests.
-- T5:
-  - Commit A (`9b54f30`):
-    - `src-tauri/src/engine/file_ops.rs`: helper `publish_no_replace` (hard link
-      no-replace; si el FS no soporta, chequeo carreras y `fs::rename`
-      same-volume, negándose a pisar destino existente). `copy_publish_then_remove`
-      ahora usa el fallback y solo borra el temp si sigue existiendo (rename lo
-      consume). `publish_hard_link` se conserva para `restore_retained_backup`.
-    - `src-tauri/src/engine/executor.rs`: warn nuevo `move execution failed` con
-      el error OS completo (`{error:#}`) antes de `action_error` (visible para
-      diagnósticos futuros de tipos de error tipo los 21 `MOVE_TEMP_CREATE_FAILED`).
-    - Tests nuevos en `file_ops.rs`: `publish_no_replace_refuses_existing_destination`
-      y `publish_no_replace_publishes_when_absent` (pasan).
-    - Harness `src-tauri/examples/verify_move_exfat.rs` (API pública de
-      `integration_test_support`, sin tocar `F:\Descargas` ni la DB de producción).
-  - Commit B: verificación aislada en `F:\fg-t5-test` (dir + DB throwaway):
-    - a.jpg / b.txt / c.mp3: **3/3 success=true, movidos a `Sorted/`**,
-      sin `MOVE_PUBLISH_FAILED` ni `MOVE_TEMP_CREATE_FAILED`.
-    - Reporte: `docs/diagnostics/2026-11-22-exfat-move.md`.
-    - Limpieza: `F:\fg-t5-test` borrado completo, sin rastro.
-- Gate: cargo test (73 Rust + 1 integración) y npm typecheck + 17 tests, en verde.
+- T1-T5: ver commits anteriores de esta serie (historia resumida en
+  `docs/diagnostics/2026-11-22*.md`): logs a archivo, dump de actividad,
+  forense de rutas, fix `component_starts_with` (boundaries + verbatim),
+  fallback de publish para exFAT, verificados (moves OK en F: real).
+- T6 (commit `7428fe7`):
+  - `src-tauri/src/ipc/files.rs` (`organize_inner_with_gate`): los aborts
+    `SCAN_LIMIT_REACHED` / `SCAN_INCOMPLETE` se reemplazaron por warnings que
+    no detienen la corrida — se organiza el subconjunto legible (la seguridad
+    sigue por archivo: `validate_source_file` + `revalidate_immediately_before_action`).
+    La respuesta ahora incluye `scanTruncated` / `scanUnreadable` en `data`
+    (listos para aviso UI futuro). `emit_organize_error` queda para el branch
+    de scan fallido.
+  - Verificación aislada en `F:\fg-t6-test` (DB throwaway + harness temporario
+    de 4 archivos, borrado después): 4/4 movidos a `Sorted/` con `DONE=4`,
+    sin aborts de scan en el log del día. Boot de `tauri dev` con el código
+    nuevo OK. El camino `errors > 0` no se forzó en runtime (difícil sobre
+    exFAT sin archivos rotos); verificado por revisión de código.
+  - Reporte: `docs/diagnostics/2026-11-22-scan-gate.md`.
+  - Limpieza completa (`fg-t6-test` y harness temporario fuera). DB de
+    producción y `F:\Descargas` intactas en esta tarjeta.
 
 ## Pendiente
 
-- Revisión del orquestador de la serie fix/beta-reliability (T1-T5).
-- Si reaparecen `MOVE_TEMP_CREATE_FAILED`, el warn nuevo de executor ya captura
-  el error OS completo en el log.
+- Revisión del orquestador de la serie fix/beta-reliability (T1-T6).
+- Si reaparecen `MOVE_TEMP_CREATE_FAILED`, el warn de executor ya captura el
+  error OS completo en el log.
 - NO tocar `migrate_duplicate_quick_rules`.
 
 ## Blockers
@@ -48,5 +45,4 @@ T5 completa, moves exFAT verificados.
 
 ## Próxima tarea
 
-- Orquestador: revisión de la serie / nueva tarjeta (queda claro que los moves
-  funcionan sobre exFAT con el pipeline actual).
+- Orquestador: revisión de la serie / nueva tarjeta.
