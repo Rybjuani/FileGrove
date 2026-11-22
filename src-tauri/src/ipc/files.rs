@@ -288,24 +288,18 @@ async fn organize_inner_with_gate<R: Runtime>(
                 return json!({ "success": false, "error": error });
             }
         };
+    // Organize the readable subset instead of aborting the whole run. Every file
+    // is still individually validated and revalidated before its move, so
+    // unreadable files are omitted, never moved blindly.
     if scan.output.stats.truncated {
-        let error = "SCAN_LIMIT_REACHED";
-        emit_organize_error(app, session_id, folder_path, error);
-        return json!({
-            "success": false,
-            "error": error,
-            "data": { "stats": scan.output.stats }
-        });
+        tracing::warn!(folder_path, "scan reached the 100k cap; organizing the scanned subset");
     }
     if scan.output.stats.errors > 0 {
-        let error = "SCAN_INCOMPLETE";
-        emit_organize_error(app, session_id, folder_path, error);
-        return json!({
-            "success": false,
-            "error": error,
-            "data": { "stats": scan.output.stats }
-        });
+        tracing::warn!(folder_path, errors = scan.output.stats.errors,
+            "scan could not read some files; organizing the readable subset");
     }
+    let scan_truncated = scan.output.stats.truncated;
+    let scan_unreadable = scan.output.stats.errors;
     if cancellation.is_cancelled() {
         let total = scan.output.files.len() as u32;
         let _ = app.emit(
@@ -334,7 +328,7 @@ async fn organize_inner_with_gate<R: Runtime>(
             .folder
             .as_ref()
             .is_some_and(|folder| folder.subfolders.destination_mode == DestinationMode::Preserve);
-    execute_plan(
+    let mut result = execute_plan(
         app,
         db,
         &cancellation,
@@ -344,7 +338,12 @@ async fn organize_inner_with_gate<R: Runtime>(
         plan,
         preserve_relative_structure,
     )
-    .await
+    .await;
+    if let Some(data) = result.get_mut("data").and_then(|value| value.as_object_mut()) {
+        data.insert("scanTruncated".to_string(), json!(scan_truncated));
+        data.insert("scanUnreadable".to_string(), json!(scan_unreadable));
+    }
+    result
 }
 
 /// Organize only the root-level files reported by the live watcher. A normal
