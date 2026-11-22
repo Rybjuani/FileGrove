@@ -218,8 +218,28 @@ fn lexical_absolute(path: &Path) -> PathBuf {
 
 #[cfg(windows)]
 fn component_starts_with(path: &Path, base: &Path) -> bool {
-    canonical_path_key(path) == canonical_path_key(base)
-        || canonical_path_key(path).starts_with(&format!("{}\\", canonical_path_key(base)))
+    let path_key = normalize_windows_key(&canonical_path_key(path));
+    let base_key = normalize_windows_key(&canonical_path_key(base));
+    if path_key == base_key {
+        return true;
+    }
+    let base_prefix = if base_key.ends_with('\\') {
+        base_key
+    } else {
+        format!("{base_key}\\")
+    };
+    path_key.starts_with(&base_prefix)
+}
+
+#[cfg(windows)]
+fn normalize_windows_key(key: &str) -> String {
+    if let Some(rest) = key.strip_prefix("\\\\?\\unc\\") {
+        format!("\\\\{rest}")
+    } else if let Some(rest) = key.strip_prefix("\\\\?\\") {
+        rest.to_string()
+    } else {
+        key.to_string()
+    }
 }
 
 #[cfg(not(windows))]
@@ -439,5 +459,18 @@ mod tests {
         assert!(relative_destination_root("{year}/Images").is_err());
         assert!(relative_destination_root("../Images").is_err());
         assert!(relative_destination_root(".").is_err());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn component_starts_with_drive_root_boundaries_and_verbatim() {
+        use std::path::Path;
+        assert!(component_starts_with(Path::new("F:\\photo.jpg"), Path::new("F:\\")));
+        assert!(component_starts_with(Path::new("F:\\sub\\photo.jpg"), Path::new("F:\\")));
+        assert!(component_starts_with(Path::new("F:\\Foo"), Path::new("F:\\Foo")));
+        assert!(!component_starts_with(Path::new("F:\\Foobar\\x.jpg"), Path::new("F:\\Foo")));
+        assert!(!component_starts_with(Path::new("F:\\Foo2\\x.jpg"), Path::new("F:\\Foo")));
+        assert!(component_starts_with(Path::new("D:\\Fotos\\a.jpg"), Path::new("D:\\Fotos")));
+        assert!(component_starts_with(Path::new("\\\\?\\F:\\photo.jpg"), Path::new("F:\\")));
     }
 }
