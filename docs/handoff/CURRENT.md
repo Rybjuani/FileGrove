@@ -5,14 +5,22 @@
 
 ## Estado
 
-T8 completa, sesiones del watcher visibles, pendiente check visual del usuario.
+T9: versión arreglada instalada, pendiente prueba visual del usuario.
 
 ## Hecho
 
-- T1-T5: ver commits anteriores de esta serie (historia resumida en
-  `docs/diagnostics/2026-11-22*.md`): logs a archivo, dump de actividad,
-  forense de rutas, fix `component_starts_with` (boundaries + verbatim),
-  fallback de publish para exFAT, verificados (moves OK en F: real).
+- T1-T8: serie completa de fixes y verificaciones (ver
+  `docs/diagnostics/2026-11-22*.md` y commits precedentes).
+- T9 (sin cambios de código):
+  - HEAD compilado: `a7a27a0` (T1-T8), rama `fix/beta-reliability` up-to-date.
+  - `npm run tauri build` OK; instalador NSIS generado y ejecutado con `/S`
+    (exit code 0, per-user).
+  - Binario instalado reemplazado: antes 2026-11-20 23:35:14 (binario viejo
+    pre-fixes), después 2026-11-21 23:32:10,
+    `C:\Users\nosom\AppData\Local\FileGrove\filegrove.exe`.
+  - Proceso viejo muerto antes de instalar; sin procesos `filegrove.exe`
+    vivos al terminar; la app NO fue lanzada.
+  - Detalle: `docs/diagnostics/2026-11-22-deploy.md`.
 - T6 (commit `7428fe7`):
   - `src-tauri/src/ipc/files.rs` (`organize_inner_with_gate`): los aborts
     `SCAN_LIMIT_REACHED` / `SCAN_INCOMPLETE` se reemplazaron por warnings que
@@ -65,7 +73,10 @@ T8 completa, sesiones del watcher visibles, pendiente check visual del usuario.
 
 ## Pendiente
 
-- Revisión del orquestador de la serie fix/beta-reliability (T1-T8).
+- **Prueba visual del usuario** con la app instalada nueva: lanzarla desde el
+  menú Inicio, probar en `F:\` (barra de progreso, botón Cancelar, limpieza del
+  banner de T8) y confirmar que los moves del disco externo funcionan (T4/T5).
+- Revisión del orquestador de la serie fix/beta-reliability (T1-T9).
 - Si reaparecen `MOVE_TEMP_CREATE_FAILED`, el warn de executor ya captura el
   error OS completo en el log.
 - NO tocar `migrate_duplicate_quick_rules`.
