@@ -364,6 +364,7 @@ impl<'a> Organizer<'a> {
                 action_skipped()
             }
             Ok(Err(error)) => {
+                tracing::warn!(error = format!("{error:#}"), "move execution failed");
                 let requires_recovery = error.to_string().contains("DESTINATION_RESTORE_FAILED");
                 let cleanup = if requires_recovery {
                     self.db.undo().reconcile()

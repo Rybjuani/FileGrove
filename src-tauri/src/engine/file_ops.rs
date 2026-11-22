@@ -332,8 +332,10 @@ fn copy_publish_then_remove(
         }
         // The temporary file lives beside the destination, so this link is
         // same-filesystem and refuses to overwrite a racing external file.
-        publish_hard_link(&temp, destination).context("MOVE_PUBLISH_FAILED")?;
-        fs::remove_file(&temp).context("MOVE_TEMP_REMOVE_FAILED")?;
+        publish_no_replace(&temp, destination).context("MOVE_PUBLISH_FAILED")?;
+        if temp.exists() {
+            fs::remove_file(&temp).context("MOVE_TEMP_REMOVE_FAILED")?;
+        }
         sync_parent(destination);
         if is_cancelled(cancellation) {
             fs::remove_file(destination).context("MOVE_ROLLBACK_FAILED")?;
@@ -379,6 +381,25 @@ fn rollback_after_failure(
 
 fn publish_hard_link(source: &Path, destination: &Path) -> std::io::Result<()> {
     fs::hard_link(source, destination)
+}
+
+/// Publish sin reemplazar jamais un destino existente. Hard link cuando el
+/// filesystem lo soporta (atómico, no-replace); si no (exFAT/FAT32), rename
+/// same-volume, negándose a pisar un destino que apareció en la carrera.
+fn publish_no_replace(source: &Path, destination: &Path) -> std::io::Result<()> {
+    match fs::hard_link(source, destination) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => Err(error),
+        Err(_) => {
+            if destination.exists() {
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::AlreadyExists,
+                    "destination appeared before publish",
+                ));
+            }
+            fs::rename(source, destination)
+        }
+    }
 }
 
 fn copy_without_overwrite(source: &Path, destination: &Path) -> Result<()> {
@@ -506,5 +527,27 @@ mod tests {
 
         fs::write(&right, b"short").unwrap();
         assert!(!files_identical(&left, &right).unwrap());
+    }
+
+    #[test]
+    fn publish_no_replace_refuses_existing_destination() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path().join("src.txt");
+        let dst = temp.path().join("dst.txt");
+        fs::write(&src, b"new").unwrap();
+        fs::write(&dst, b"old").unwrap();
+        let err = publish_no_replace(&src, &dst).unwrap_err();
+        assert_eq!(err.kind(), std::io::ErrorKind::AlreadyExists);
+        assert_eq!(fs::read(&dst).unwrap(), b"old");
+    }
+
+    #[test]
+    fn publish_no_replace_publishes_when_absent() {
+        let temp = tempfile::tempdir().unwrap();
+        let src = temp.path().join("src.txt");
+        let dst = temp.path().join("dst.txt");
+        fs::write(&src, b"data").unwrap();
+        publish_no_replace(&src, &dst).unwrap();
+        assert!(dst.exists());
     }
 }
