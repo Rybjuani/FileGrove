@@ -5,7 +5,7 @@
 
 ## Estado
 
-T6 completa, gate de escaneo relajado, verificado.
+T7 completa, idioma del SO + tema system en primer arranque.
 
 ## Hecho
 
@@ -29,10 +29,26 @@ T6 completa, gate de escaneo relajado, verificado.
   - Reporte: `docs/diagnostics/2026-11-22-scan-gate.md`.
   - Limpieza completa (`fg-t6-test` y harness temporario fuera). DB de
     producción y `F:\Descargas` intactas en esta tarjeta.
+- T7 (frontend-only):
+  - `src/lib/locale.ts` nuevo: `detectUiLocale` (es*/lowercase → 'es', resto
+    'en') y `firstRunLocalePatch` (solo cuando `onboardingCompleted !== true`;
+    siembra idioma del SO y `theme: 'system'`, sin tocar lo ya configurado).
+  - `src/i18n/index.ts`: `lng` inicial detectado con `detectUiLocale(navigator.language)`;
+    `fallbackLng: 'en'` sin cambios.
+  - `src/App.tsx`: seed de primer arranque con `firstRunSeeded` (useRef, una
+    sola vez) que aplica el patch vía `updateSettings` y cambia el idioma de
+    i18n. Único ajuste sobre el código indicado: cast `patch as Partial<SettingsPatch>`
+    porque `Partial<Settings>` lleva index signature y `FirstRunPatch` no
+    (import con alias para no chocar con la página `Settings`).
+  - Tests: `tests/unit/locale.test.ts` (6 casos: variantes es, fallback en/undefined/
+    null/'', seed en primer arranque, no-op tras onboarding, no-op ya configurado,
+    null settings). 23 tests frontend en verde.
+  - La lógica queda cubierta por unit tests puros; sin DB fresca de producción
+    ni render de App (cableado validado por typecheck).
 
 ## Pendiente
 
-- Revisión del orquestador de la serie fix/beta-reliability (T1-T6).
+- Revisión del orquestador de la serie fix/beta-reliability (T1-T7).
 - Si reaparecen `MOVE_TEMP_CREATE_FAILED`, el warn de executor ya captura el
   error OS completo en el log.
 - NO tocar `migrate_duplicate_quick_rules`.
