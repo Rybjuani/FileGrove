@@ -5,7 +5,7 @@
 
 ## Estado
 
-T2 completa, esperando revisión del orquestador.
+T3 completa, esperando fix T4 del orquestador.
 
 ## Hecho
 
@@ -30,14 +30,24 @@ T2 completa, esperando revisión del orquestador.
     `SizeRemaining ≈ 313.5 GiB`.
   - Reporte en `docs/diagnostics/2026-11-22.md` (solo códigos y agregados, sin
     datos personales).
+- Commit 4 (T3):
+  - `src-tauri/examples/inspect_paths.rs`: imprime raw | std canonicalize |
+    dunce canonicalize | key | veredicto para la raíz y 3 archivos de la raíz
+    vigilada pasada por argv[1]. Sin panic: errores como `ERR: <motivo>`.
+  - Ejecutado contra `F:\` (ver reporte `docs/diagnostics/2026-11-22-paths.md`):
+    namespace verbatim-disk (`\\?\F:\`, volver a `F:\` con dunce), veredicto
+    `false` para 4/4 archivos.
+  - Causa raíz evidenciada: `component_starts_with` falla cuando la raíz
+    vigilada es la raíz de un drive — `canonical_path_key` de `F:\` termina en
+    backslash y el test impone prefijo `f:\\` (doble backslash), imposible de
+    matchear. No se tocó `safety.rs` (solo evidencia).
 
 ## Pendiente
 
-- Revisión del orquestador sobre `docs/diagnostics/2026-11-22.md`.
-- Próxima tarjeta: fix de `SOURCE_FILE_OUTSIDE_WATCHED_FOLDER` en moves hacia el
-  disco externo — hipótesis a validar: comparación de roots en
-  `validate_source_file` (`src-tauri/src/paths/safety.rs`) y el filesystem
-  "Unknown" de F:. NO tocar `migrate_duplicate_quick_rules`.
+- T4 (orquestador): fix del caso borde de `component_starts_with` para raíces
+  de drive (`src-tauri/src/paths/safety.rs:220`). Sugerencia en el reporte:
+  normalizar la clave de raíz sin backslash final antes de comparar o comparar
+  por componentes. NO tocar `migrate_duplicate_quick_rules`.
 
 ## Blockers
 
@@ -51,4 +61,5 @@ T2 completa, esperando revisión del orquestador.
 
 ## Próxima tarea
 
-- Esperar revisión del orquestador; luego la tarjeta de fix de moves.
+- T4: fix del caso borde de `component_starts_with` para raíces de drive
+  (esperando al orquestador).
