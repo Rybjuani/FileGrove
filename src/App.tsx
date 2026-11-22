@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MainLayout } from './components/MainLayout';
 import { Dashboard } from './pages/Dashboard';
 import { Rules } from './pages/Rules';
@@ -7,6 +7,8 @@ import { Settings } from './pages/Settings';
 import { About } from './pages/About';
 import { useAppStore } from './stores/useAppStore';
 import { useTheme } from './lib/theme';
+import { firstRunLocalePatch } from './lib/locale';
+import type { Settings as SettingsPatch } from './ipc/types';
 import i18n from './i18n';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
@@ -32,6 +34,21 @@ export default function App() {
       void i18n.changeLanguage(settings.language);
     }
   }, [settings?.language]);
+
+  const firstRunSeeded = useRef(false);
+  useEffect(() => {
+    if (firstRunSeeded.current) return;
+    const patch = firstRunLocalePatch(
+      settings,
+      typeof navigator !== 'undefined' ? navigator.language : null,
+    );
+    if (Object.keys(patch).length === 0) return;
+    firstRunSeeded.current = true;
+    // FirstRunPatch lacks the index signature of Partial<Settings>; the cast is
+    // checked field-by-field by the FirstRunPatch type itself.
+    void updateSettings(patch as Partial<SettingsPatch>);
+    if (patch.language) void i18n.changeLanguage(patch.language);
+  }, [settings, updateSettings]);
 
   useEffect(() => {
     let disposed = false;
