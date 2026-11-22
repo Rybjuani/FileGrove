@@ -84,21 +84,54 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
 
   useEffect(() => {
     const offStarted = ipc.files.onStarted((data) => {
-      if (data.folderPath !== folder.path || !busyRef.current || activeSessionRef.current) return;
+      if (data.folderPath !== folder.path) return;
       activeSessionRef.current = data.sessionId;
       setActiveSessionId(data.sessionId);
+      setProgress(null);
+      setLastResult(null);
+      useAppStore.getState().clearError();
     });
     const offProgress = ipc.files.onProgress((data) => {
       if (data.sessionId === activeSessionRef.current) {
         setProgress(data);
       }
     });
+    const offDone = ipc.files.onDone((data) => {
+      if (data.folderPath !== folder.path) return;
+      activeSessionRef.current = null;
+      busyRef.current = false;
+      setActiveSessionId(null);
+      setBusy(false);
+      setCancelRequested(false);
+      setProgress(null);
+      useAppStore.getState().clearError();
+      const stats = data.stats;
+      if (data.error) {
+        setLastResult(readableIpcError(data.error, t));
+      } else if (data.cancelled) {
+        setLastResult(t('folderCard.actions.cancelled', { count: stats.done }));
+      } else if (stats.failed === 0) {
+        setLastResult(t('dashboard.successOrganized', { count: stats.done }));
+      } else {
+        setLastResult(t('dashboard.partialOrganized', { moved: stats.done, failed: stats.failed }));
+      }
+      if (stats.done > 0) {
+        void ipc.files.listUndoSessions(folder.id).then((response) => {
+          if (response.success) {
+            const sessions = response.data ?? [];
+            setUndoSession(sessions[0] ?? null);
+            setUndoSessionCount(sessions.length);
+          }
+        });
+      }
+    });
 
     return () => {
       void offStarted.then((fn) => fn());
       void offProgress.then((fn) => fn());
+      void offDone.then((fn) => fn());
     };
-  }, [folder.path]);
+  }, [folder.path, folder.id, t]);
 
   const requestPreview = () =>
     folder.subfolders.enabled
@@ -165,60 +198,31 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
   };
 
   const handleOrganize = async () => {
-    if (undoBusy) return;
-    if (busy) {
-      if (activeSessionId) {
-        setCancelRequested(true);
-        await ipc.files.cancelOrganize(activeSessionId);
-      }
+    if (undoBusy || modeChanging) return;
+    if (activeSessionRef.current) {
+      setCancelRequested(true);
+      await ipc.files.cancelOrganize(activeSessionRef.current);
       return;
     }
-
+    if (busy) return;
     if (!(await confirmDangerousImpact('manual'))) return;
-
     if (!(await ensureRecursiveConfirmation())) return;
-
     busyRef.current = true;
-    activeSessionRef.current = null;
     setBusy(true);
     setCancelRequested(false);
-    setProgress(null);
     setLastResult(null);
-
-    try {
-      const res = folder.subfolders.enabled
-        ? await ipc.files.organizeRecursive(folder.path, {
-            maxDepth: folder.subfolders.maxDepth,
-            destinationMode: folder.subfolders.destinationMode,
-            excludeFolders: folder.excludeFolders,
-            excludePatterns: folder.excludePatterns,
-          })
-        : await ipc.files.organize(folder.path);
-      if (res.success && res.data) {
-        const { done, failed } = res.data.stats;
-        if (res.data.cancelled) {
-          setLastResult(t('folderCard.actions.cancelled', { count: done }));
-        } else if (failed === 0) {
-          setLastResult(t('dashboard.successOrganized', { count: done }));
-        } else {
-          setLastResult(t('dashboard.partialOrganized', { moved: done, failed }));
-        }
-        if (res.data.undoCount > 0) {
-          const history = await ipc.files.listUndoSessions(folder.id);
-          const sessions = history.success ? (history.data ?? []) : [];
-          setUndoSession(sessions[0] ?? null);
-          setUndoSessionCount(sessions.length);
-        }
-      } else if (res.error) {
-        setLastResult(readableIpcError(res.error, t));
-      }
-    } finally {
+    const res = folder.subfolders.enabled
+      ? await ipc.files.organizeRecursive(folder.path, {
+          maxDepth: folder.subfolders.maxDepth,
+          destinationMode: folder.subfolders.destinationMode,
+          excludeFolders: folder.excludeFolders,
+          excludePatterns: folder.excludePatterns,
+        })
+      : await ipc.files.organize(folder.path);
+    if (!res.success && res.error) {
       busyRef.current = false;
-      activeSessionRef.current = null;
       setBusy(false);
-      setActiveSessionId(null);
-      setCancelRequested(false);
-      setProgress(null);
+      setLastResult(readableIpcError(res.error, t));
     }
   };
 
@@ -420,10 +424,10 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
         <button
           className="btn-primary"
           onClick={() => void handleOrganize()}
-          disabled={undoBusy || (busy && !activeSessionId) || modeChanging}
+          disabled={undoBusy || modeChanging || (busy && !activeSessionId)}
         >
-          {busy ? <Square size={14} /> : <Play size={14} />}
-          {busy
+          {activeSessionId ? <Square size={14} /> : <Play size={14} />}
+          {activeSessionId
             ? t(cancelRequested ? 'folderCard.actions.cancelling' : 'folderCard.actions.cancel')
             : t('folderCard.actions.organize')}
         </button>
@@ -445,7 +449,7 @@ export function FolderCard({ folder, onNavigateToRules }: Props) {
         )}
       </div>
 
-      {busy && progress && (
+      {activeSessionId && progress && (
         <div className="space-y-2" role="status" aria-live="polite">
           <div className="flex items-center justify-between gap-3 text-xs text-primary-300">
             <span>{t('folderCard.progress.label')}</span>

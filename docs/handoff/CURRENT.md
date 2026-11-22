@@ -5,7 +5,7 @@
 
 ## Estado
 
-T7 completa, idioma del SO + tema system en primer arranque.
+T8 completa, sesiones del watcher visibles, pendiente check visual del usuario.
 
 ## Hecho
 
@@ -45,10 +45,27 @@ T7 completa, idioma del SO + tema system en primer arranque.
     null settings). 23 tests frontend en verde.
   - La lógica queda cubierta por unit tests puros; sin DB fresca de producción
     ni render de App (cableado validado por typecheck).
+- T8 (frontend-only, `src/components/FolderCard.tsx`):
+  - Listener `organize:done` nuevo: limpia sessión/busy/banner de error pegado,
+    setea resultado (exitoso/parcial/cancelado/error legible) y refresca las
+    sesiones de undo cuando `done > 0`.
+  - `onStarted` ya no filtra por `busyRef` (el watcher ahora dispara también
+    sesiones no iniciadas por el botón — automatización del watcher).
+  - `handleOrganize`: si hay sesión activa, cancela; el éxito ya no se maneja
+    en la respuesta del IPC (la maneja `organize:done` del listener). El banner
+    de "error pegado" se limpia en started/done vía `clearError`.
+  - Barra de progreso aparece cuando `activeSessionId && progress`.
+  - Botón Organizar/Cancelar según sesión activa (ícono Square/Play).
+  - Tipos: `OrganizeDone` ya declaraba `error?`/`cancelled`/`stats` — sin cambio.
+  - Gate: typecheck limpio, 23 tests frontend, cargo test 74 ok (fallo de entorno
+    `watcher_service` preexistente), `npm run build` OK.
+  - Verificación UI no posible por el agente (no ve el webview): chequeo visual
+    de 10 segundos pendiente en el usuario (carpeta Automática + soltar archivo
+    → barra de progreso y botón Cancelar; al terminar se limpia el banner).
 
 ## Pendiente
 
-- Revisión del orquestador de la serie fix/beta-reliability (T1-T7).
+- Revisión del orquestador de la serie fix/beta-reliability (T1-T8).
 - Si reaparecen `MOVE_TEMP_CREATE_FAILED`, el warn de executor ya captura el
   error OS completo en el log.
 - NO tocar `migrate_duplicate_quick_rules`.
