@@ -4,8 +4,8 @@
 //!
 //! For the root and the first 3 regular files found under it, prints one line:
 //!   raw | std canonicalize | dunce canonicalize | key | starts_with verdict
-//! The verdict replicates `component_starts_with` (Windows flavor):
-//! `key_file == key_root || key_file.starts_with(key_root + "\\")`.
+//! The verdict replicates the real `component_starts_with` (Windows flavor):
+//! `key_file == key_root || key_file.starts_with(&key_root)`.
 //! Errors are printed as `ERR: <reason>` instead of panicking.
 
 use std::path::{Path, PathBuf};
@@ -91,8 +91,6 @@ fn print_entry(path: &Path, kind: &str, root_key: &str) {
         Err(error) => format!("ERR: {error}"),
     };
     let key = path_key(path);
-    // Windows `component_starts_with`: exact key match or key prefix on a
-    // component boundary (root key followed by a backslash).
-    let verdict = format!("{}", key == root_key || key.starts_with(&format!("{root_key}\\")));
+    let verdict = key == root_key || key.starts_with(&root_key);
     println!("{kind}: {} | {std_canonical} | {dunce_canonical} | {key} | {verdict}", path.display());
 }
